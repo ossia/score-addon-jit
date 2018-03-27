@@ -8,10 +8,12 @@ project(score_addon_jit LANGUAGES CXX)
 score_common_setup()
 # Source files
 set(HDRS
+    JitCpp/JitModel.hpp
     score_addon_jit.hpp
 )
 
 set(SRCS
+    JitCpp/JitModel.cpp
     score_addon_jit.cpp
 )
 
@@ -92,7 +94,7 @@ score_moc_headers(${PROJECT_NAME} "${HDRS}")
 score_generate_command_list_file(${PROJECT_NAME} "${HDRS}")
 
 # Link
-target_link_libraries(${PROJECT_NAME} PUBLIC score_plugin_engine)
+target_link_libraries(${PROJECT_NAME} PUBLIC score_plugin_engine score_plugin_media)
 target_include_directories(${PROJECT_NAME} PRIVATE 3rdparty/libisf/src/)
 
 # Target-specific options
