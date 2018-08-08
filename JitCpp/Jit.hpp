@@ -136,27 +136,31 @@ class ClangCC1Driver
 #undef STRINGIFY
 #undef STRINGIFY_DETAIL
       args.push_back("-I");
-      args.push_back("/usr/include/c++/7.3.1/x86_64-pc-linux-gnu");
+      args.push_back("/usr/include/c++/8.2.0/x86_64-pc-linux-gnu");
       args.push_back("-I");
-      args.push_back("/usr/include/c++/7.3.1");
+      args.push_back("/usr/include/c++/8.2.0");
       args.push_back("-I");
       args.push_back("/usr/include/x86_64-linux-gnu");
       args.push_back("-I");
       args.push_back("/usr/include");
       args.push_back("-I");
-      args.push_back("/home/jcelerier/i-score/API/OSSIA");
+      args.push_back("/home/jcelerier/score/API/OSSIA");
       args.push_back("-I");
-      args.push_back("/home/jcelerier/i-score/API/3rdparty/nano-signal-slot/include");
+      args.push_back("/home/jcelerier/score/API/3rdparty/nano-signal-slot/include");
       args.push_back("-I");
-      args.push_back("/home/jcelerier/i-score/API/3rdparty/brigand/include");
+      args.push_back("/home/jcelerier/score/API/3rdparty/brigand/include");
       args.push_back("-I");
-      args.push_back("/home/jcelerier/i-score/API/3rdparty/variant/include");
+      args.push_back("/home/jcelerier/score/API/3rdparty/variant/include");
       args.push_back("-I");
-      args.push_back("/home/jcelerier/i-score/API/3rdparty/SmallFunction/smallfun/include");
+      args.push_back("/home/jcelerier/score/API/3rdparty/SmallFunction/smallfun/include");
       args.push_back("-I");
-      args.push_back("/home/jcelerier/i-score/API/3rdparty/ModernMIDI");
+      args.push_back("/home/jcelerier/score/API/3rdparty/RtMidi17");
       args.push_back("-I");
-      args.push_back("/home/jcelerier/travail/build-i-score-Sanitized-Debug/API/OSSIA");
+      args.push_back("/home/jcelerier/score/API/3rdparty/flat/include");
+      args.push_back("-I");
+      args.push_back("/home/jcelerier/score/API/3rdparty/flat_hash_map/include");
+      args.push_back("-I");
+      args.push_back("/home/jcelerier/build-score-Sanitized-Debug/API/OSSIA");
       args.push_back("-I");
       args.push_back("./include");
 

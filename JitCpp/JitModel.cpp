@@ -257,16 +257,22 @@ QString EffectProcessFactory_T<Jit::JitEffectModel>::customConstructionData() co
 {
   return R"_(
 #include <vector>
+#include <iostream>
+
 #include <ossia/dataflow/graph_node.hpp>
+#include <ossia/dataflow/port.hpp>
+#include <ossia/dataflow/data.hpp>
+#include <ossia/network/value/value_conversion.hpp>
 
 struct foo : ossia::graph_node {
  foo()
  {
-   m_inlets.push_back(ossia::make_inlet<ossia::value_port>());
-   m_outlets.push_back(ossia::make_outlet<ossia::value_port>());
+   using namespace ossia;
+   m_inlets.push_back(make_inlet<value_port>());
+   m_outlets.push_back(make_outlet<value_port>());
  }
 
- void run(ossia::token_request t, ossia::execution_state&)
+ void run(ossia::token_request t, ossia::exec_state_facade) noexcept override
  {
    std::cerr << " oh wow " << t.date.impl << std::endl;
    auto& in  = *m_inlets[0]->data.target<ossia::value_port>();
@@ -274,7 +280,7 @@ struct foo : ossia::graph_node {
 
    for(auto& val : in.get_data())
    {
-     out.add_raw_value(ossia::convert<float>(val.value) * 2);
+     out.write_value(ossia::convert<float>(val.value) * 2, t.offset);
    }
  }
 };
