@@ -6,6 +6,7 @@
 #include <Process/GenericProcessFactory.hpp>
 #include <QDialog>
 #include <JitCpp/Jit.hpp>
+#include <ossia/dataflow/node_process.hpp>
 namespace Jit
 {
 class JitEffectModel;
@@ -20,7 +21,6 @@ class JitEffectModel :
 {
     friend class JitUI;
     friend class JitUpdateUI;
-    Q_OBJECT
     SCORE_SERIALIZE_FRIENDS
     PROCESS_METADATA_IMPL(JitEffectModel)
 
@@ -47,6 +47,7 @@ class JitEffectModel :
       return m_text;
     }
 
+    static constexpr bool hasExternalUI() { return false; }
     QString prettyName() const override;
     void setText(const QString& txt);
 
@@ -88,12 +89,11 @@ using LayerFactory = Process::EffectLayerFactory_T<JitEffectModel, Media::Effect
 }
 
 
-namespace Engine::Execution
+namespace Execution
 {
 class JitEffectComponent final
-    : public Engine::Execution::ProcessComponent_T<Jit::JitEffectModel, ossia::node_process>
+    : public Execution::ProcessComponent_T<Jit::JitEffectModel, ossia::node_process>
 {
-    Q_OBJECT
     COMPONENT_METADATA("122ceaeb-cbcc-4808-91f2-1929e3ca8292")
 
     public:
@@ -101,10 +101,10 @@ class JitEffectComponent final
 
     JitEffectComponent(
         Jit::JitEffectModel& proc,
-        const Engine::Execution::Context& ctx,
+        const Execution::Context& ctx,
         const Id<score::Component>& id,
         QObject* parent);
     ~JitEffectComponent() override;
 };
-using JitEffectComponentFactory = Engine::Execution::ProcessComponentFactory_T<JitEffectComponent>;
+using JitEffectComponentFactory = Execution::ProcessComponentFactory_T<JitEffectComponent>;
 }

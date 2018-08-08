@@ -11,6 +11,7 @@
 #include <Process/Dataflow/PortFactory.hpp>
 
 #include <ossia/dataflow/execution_state.hpp>
+#include <ossia/dataflow/port.hpp>
 
 #include <../tools/driver/cc1_main.cpp>
 namespace Jit
@@ -285,12 +286,12 @@ extern "C" ossia::graph_node* score_graph_node_factory() {
 }
 
 }
-namespace Engine::Execution
+namespace Execution
 {
 
-Engine::Execution::JitEffectComponent::JitEffectComponent(
+Execution::JitEffectComponent::JitEffectComponent(
     Jit::JitEffectModel& proc,
-    const Engine::Execution::Context& ctx,
+    const Execution::Context& ctx,
     const Id<score::Component>& id,
     QObject* parent)
   : ProcessComponent_T{proc, ctx, id, "JitComponent", parent}

@@ -24,8 +24,11 @@ score_addon_jit::factories(
       FW<Process::LayerFactory
           , Jit::LayerFactory
           >,
-      FW<Engine::Execution::ProcessComponentFactory
-          , Engine::Execution::JitEffectComponentFactory
+      FW<Execution::ProcessComponentFactory
+          , Execution::JitEffectComponentFactory
           >
   >(ctx, key);
 }
+
+#include <score/plugins/PluginInstances.hpp>
+SCORE_EXPORT_PLUGIN(score_addon_jit)

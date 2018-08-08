@@ -85,11 +85,6 @@ target_link_libraries(score_addon_jit PRIVATE
     clangLex
 )
 
-
-
-# Creation of the library
-score_moc_headers(${PROJECT_NAME} "${HDRS}")
-
 # Code generation
 score_generate_command_list_file(${PROJECT_NAME} "${HDRS}")
 
