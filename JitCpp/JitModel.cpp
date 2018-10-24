@@ -1,28 +1,29 @@
 #include "JitModel.hpp"
-#include <QVBoxLayout>
+
 #include <QDialog>
-#include <QPlainTextEdit>
 #include <QDialogButtonBox>
+#include <QPlainTextEdit>
+#include <QVBoxLayout>
 //#include <JitCpp/Commands/EditJitEffect.hpp>
+
+#include <Process/Dataflow/PortFactory.hpp>
 
 #include <score/command/Dispatchers/CommandDispatcher.hpp>
 #include <score/tools/IdentifierGeneration.hpp>
-#include <iostream>
-#include <Process/Dataflow/PortFactory.hpp>
 
 #include <ossia/dataflow/execution_state.hpp>
 #include <ossia/dataflow/port.hpp>
+
+#include <iostream>
 
 #include <../tools/driver/cc1_main.cpp>
 namespace Jit
 {
 
 JitEffectModel::JitEffectModel(
-    TimeVal t,
-    const QString& jitProgram,
-    const Id<Process::ProcessModel>& id,
-    QObject* parent):
-  Process::ProcessModel{t, id, "Jit", parent}
+    TimeVal t, const QString& jitProgram, const Id<Process::ProcessModel>& id,
+    QObject* parent)
+    : Process::ProcessModel{t, id, "Jit", parent}
 {
   init();
   setText(jitProgram);
@@ -30,7 +31,6 @@ JitEffectModel::JitEffectModel(
 
 JitEffectModel::~JitEffectModel()
 {
-
 }
 
 void JitEffectModel::setText(const QString& txt)
@@ -43,7 +43,7 @@ void JitEffectModel::init()
 {
 }
 
-QString JitEffectModel::prettyName() const
+QString JitEffectModel::prettyName() const noexcept
 {
   return "Jit";
 }
@@ -51,27 +51,30 @@ void JitEffectModel::reload()
 {
   auto fx_text = m_text.toLocal8Bit();
   ossia::optional<jit_node> jit_factory;
-  if(fx_text.isEmpty())
+  if (fx_text.isEmpty())
   {
     return;
   }
-  try {
+  try
+  {
     jit_factory = ctx.compile(fx_text.toStdString());
 
-    if(!jit_factory)
+    if (!jit_factory)
       return;
-  } catch(...) {
+  }
+  catch (...)
+  {
     return;
   }
 
   std::unique_ptr<ossia::graph_node> jit_object{jit_factory->factory()};
-  if(!jit_object)
+  if (!jit_object)
   {
     jit_factory.reset();
     return;
   }
 
-  if(node /*&& jit_object */)
+  if (node /*&& jit_object */)
   {
     /*
     // updating an existing DSP
@@ -93,15 +96,16 @@ void JitEffectModel::reload()
     m_inlets.resize(ui.i);
     */
   }
-  else if(!m_inlets.empty() && !m_outlets.empty() && !jit_factory && !jit_object)
+  else if (
+      !m_inlets.empty() && !m_outlets.empty() && !jit_factory && !jit_object)
   {
     // loading
-/*
-    jit_factory = fac;
-    jit_object = obj;
-    // Try to reuse controls
-    Jit::UpdateUI<decltype(*this)> ui{*this};
-    buildUserInterfaceCDSPInstance(jit_object, &ui.glue);*/
+    /*
+        jit_factory = fac;
+        jit_object = obj;
+        // Try to reuse controls
+        Jit::UpdateUI<decltype(*this)> ui{*this};
+        buildUserInterfaceCDSPInstance(jit_object, &ui.glue);*/
   }
   else
   {
@@ -113,7 +117,8 @@ void JitEffectModel::reload()
     m_inlets.clear();
     m_outlets.clear();
 
-    struct inlet_vis {
+    struct inlet_vis
+    {
       JitEffectModel& self;
       Process::Inlet* operator()(const ossia::audio_port& p)
       {
@@ -136,10 +141,14 @@ void JitEffectModel::reload()
         return i;
       }
 
-      Process::Inlet* operator()() { return nullptr; }
+      Process::Inlet* operator()()
+      {
+        return nullptr;
+      }
     };
 
-    struct outlet_vis {
+    struct outlet_vis
+    {
       JitEffectModel& self;
       Process::Outlet* operator()(const ossia::audio_port& p)
       {
@@ -161,31 +170,36 @@ void JitEffectModel::reload()
         i->type = Process::PortType::Message;
         return i;
       }
-      Process::Outlet* operator()() { return nullptr; }
+      Process::Outlet* operator()()
+      {
+        return nullptr;
+      }
     };
-    for(ossia::inlet* port : jit_object->inputs())
+    for (ossia::inlet* port : jit_object->inputs())
     {
-      if(auto inl = ossia::apply(inlet_vis{*this}, port->data))
+      if (auto inl = ossia::apply(inlet_vis{*this}, port->data))
       {
         m_inlets.push_back(inl);
       }
     }
-    for(ossia::outlet* port : jit_object->outputs())
+    for (ossia::outlet* port : jit_object->outputs())
     {
-      if(auto inl = ossia::apply(outlet_vis{*this}, port->data))
+      if (auto inl = ossia::apply(outlet_vis{*this}, port->data))
       {
         m_outlets.push_back(inl);
       }
     }
 
-    if(!m_outlets.empty() && m_outlets.front()->type == Process::PortType::Audio)
+    if (!m_outlets.empty()
+        && m_outlets.front()->type == Process::PortType::Audio)
       m_outlets.front()->setPropagate(true);
   }
 }
 
-JitEditDialog::JitEditDialog(const JitEffectModel& fx, const score::DocumentContext& ctx, QWidget* parent):
-  QDialog{parent}
-  , m_effect{fx}
+JitEditDialog::JitEditDialog(
+    const JitEffectModel& fx, const score::DocumentContext& ctx,
+    QWidget* parent)
+    : QDialog{parent}, m_effect{fx}
 {
   this->setWindowFlag(Qt::WindowCloseButtonHint, false);
   auto lay = new QVBoxLayout{this};
@@ -197,54 +211,50 @@ JitEditDialog::JitEditDialog(const JitEffectModel& fx, const score::DocumentCont
   auto bbox = new QDialogButtonBox{
       QDialogButtonBox::Ok | QDialogButtonBox::Close, this};
   lay->addWidget(bbox);
-  connect(bbox, &QDialogButtonBox::accepted,
-          this, [&] {
-    //CommandDispatcher<>{ctx.commandStack}.submitCommand(
+  connect(bbox, &QDialogButtonBox::accepted, this, [&] {
+    // CommandDispatcher<>{ctx.commandStack}.submit(
     //      new Commands::EditJitEffect{fx, text()});
   });
-  connect(bbox, &QDialogButtonBox::rejected,
-          this, &QDialog::reject);
+  connect(bbox, &QDialogButtonBox::rejected, this, &QDialog::reject);
 }
 
 QString JitEditDialog::text() const
 {
   return m_textedit->document()->toPlainText();
 }
-
-
 }
 
 template <>
-void DataStreamReader::read(
-    const Jit::JitEffectModel& eff)
+void DataStreamReader::read(const Jit::JitEffectModel& eff)
 {
   readPorts(*this, eff.m_inlets, eff.m_outlets);
   m_stream << eff.m_text;
 }
 
 template <>
-void DataStreamWriter::write(
-    Jit::JitEffectModel& eff)
+void DataStreamWriter::write(Jit::JitEffectModel& eff)
 {
-  writePorts(*this, components.interfaces<Process::PortFactoryList>(), eff.m_inlets, eff.m_outlets, &eff);
+  writePorts(
+      *this, components.interfaces<Process::PortFactoryList>(), eff.m_inlets,
+      eff.m_outlets, &eff);
 
   m_stream >> eff.m_text;
   eff.reload();
 }
 
 template <>
-void JSONObjectReader::read(
-    const Jit::JitEffectModel& eff)
+void JSONObjectReader::read(const Jit::JitEffectModel& eff)
 {
   readPorts(obj, eff.m_inlets, eff.m_outlets);
   obj["Text"] = eff.text();
 }
 
 template <>
-void JSONObjectWriter::write(
-    Jit::JitEffectModel& eff)
+void JSONObjectWriter::write(Jit::JitEffectModel& eff)
 {
-  writePorts(obj, components.interfaces<Process::PortFactoryList>(), eff.m_inlets, eff.m_outlets, &eff);
+  writePorts(
+      obj, components.interfaces<Process::PortFactoryList>(), eff.m_inlets,
+      eff.m_outlets, &eff);
   eff.m_text = obj["Text"].toString();
   eff.reload();
 }
@@ -252,17 +262,18 @@ void JSONObjectWriter::write(
 namespace Process
 {
 
-template<>
-QString EffectProcessFactory_T<Jit::JitEffectModel>::customConstructionData() const
+template <>
+QString
+EffectProcessFactory_T<Jit::JitEffectModel>::customConstructionData() const
 {
   return R"_(
-#include <vector>
-#include <iostream>
-
+#include <ossia/dataflow/data.hpp>
 #include <ossia/dataflow/graph_node.hpp>
 #include <ossia/dataflow/port.hpp>
-#include <ossia/dataflow/data.hpp>
 #include <ossia/network/value/value_conversion.hpp>
+
+#include <iostream>
+#include <vector>
 
 struct foo : ossia::graph_node {
  foo()
@@ -291,34 +302,34 @@ extern "C" ossia::graph_node* score_graph_node_factory() {
 )_";
 }
 
+
+template <>
+Process::Descriptor
+EffectProcessFactory_T<Jit::JitEffectModel>::descriptor(QString d) const
+{
+  return Metadata<Descriptor_k, Jit::JitEffectModel>::get();
+}
+
 }
 namespace Execution
 {
 
 Execution::JitEffectComponent::JitEffectComponent(
-    Jit::JitEffectModel& proc,
-    const Execution::Context& ctx,
-    const Id<score::Component>& id,
-    QObject* parent)
-  : ProcessComponent_T{proc, ctx, id, "JitComponent", parent}
+    Jit::JitEffectModel& proc, const Execution::Context& ctx,
+    const Id<score::Component>& id, QObject* parent)
+    : ProcessComponent_T{proc, ctx, id, "JitComponent", parent}
 {
-  if(proc.node)
+  if (proc.node)
   {
     this->node.reset(proc.node->factory());
-    if(this->node)
+    if (this->node)
     {
       m_ossia_process = std::make_shared<ossia::node_process>(node);
     }
   }
 }
 
-
-
-
-
 JitEffectComponent::~JitEffectComponent()
 {
-
 }
-
 }

@@ -9,18 +9,23 @@ score_common_setup()
 # Source files
 set(HDRS
     JitCpp/JitModel.hpp
+    JitCpp/Jit.hpp
+    JitCpp/JitExecutor.hpp
+    JitCpp/ApplicationPlugin.hpp
     score_addon_jit.hpp
 )
 
 set(SRCS
     JitCpp/JitModel.cpp
+    JitCpp/JitExecutor.cpp
+    JitCpp/ApplicationPlugin.cpp
     score_addon_jit.cpp
 )
 
 add_library(${PROJECT_NAME} ${SRCS} ${HDRS})
 
 set(LLVM_BUILD_MAIN_SRC_DIR /opt/llvm)
-find_package(LLVM 6.0 REQUIRED PATHS ${LLVM_DIR})
+find_package(LLVM 7.0 REQUIRED PATHS ${LLVM_DIR})
 include(${LLVM_BUILD_BINARY_DIR}/lib/cmake/clang/ClangTargets.cmake)
 
 if(EXISTS ${LLVM_BUILD_MAIN_SRC_DIR}/tools/clang)
@@ -63,7 +68,8 @@ target_compile_definitions(score_addon_jit
 
 # Clang dependencies
 target_link_libraries(score_addon_jit PRIVATE
-    /usr/lib/libLLVM.so
+    LLVM
+    clangARCMigrate
     clangBasic
     clangCodeGen
     clangDriver
