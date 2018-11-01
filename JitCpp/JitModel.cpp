@@ -50,7 +50,7 @@ QString JitEffectModel::prettyName() const noexcept
 void JitEffectModel::reload()
 {
   auto fx_text = m_text.toLocal8Bit();
-  ossia::optional<jit_node> jit_factory;
+  ossia::optional<jitted_node> jit_factory;
   if (fx_text.isEmpty())
   {
     return;

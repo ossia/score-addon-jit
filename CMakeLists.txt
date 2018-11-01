@@ -10,6 +10,7 @@ score_common_setup()
 set(HDRS
     JitCpp/JitModel.hpp
     JitCpp/Jit.hpp
+    JitCpp/JitPlatform.hpp
     JitCpp/JitExecutor.hpp
     JitCpp/ApplicationPlugin.hpp
     score_addon_jit.hpp
@@ -38,7 +39,6 @@ endif()
 
 # LLVM definitions
 separate_arguments(LLVM_DEFINITIONS)
-# JitFromScratch dependencies
 llvm_map_components_to_libnames(LLVM_LIBS
     core
     executionengine
@@ -62,8 +62,9 @@ target_compile_definitions(score_addon_jit PRIVATE
 
 target_compile_definitions(score_addon_jit
   PRIVATE
-    # Supply path to Clang resources in the LLVM/Clang build directory
-    JIT_FROM_SCRATCH_CLANG_RESOURCE_DIR=${LLVM_BUILD_BINARY_DIR}/lib/clang/${LLVM_PACKAGE_VERSION}
+    SCORE_LLVM_VERSION="${LLVM_PACKAGE_VERSION}"
+    SCORE_ROOT_SOURCE_DIR="${SCORE_ROOT_SOURCE_DIR}"
+    SCORE_ROOT_BINARY_DIR="${SCORE_ROOT_BINARY_DIR}"
 )
 
 # Clang dependencies
@@ -96,7 +97,21 @@ score_generate_command_list_file(${PROJECT_NAME} "${HDRS}")
 
 # Link
 target_link_libraries(${PROJECT_NAME} PUBLIC score_plugin_engine score_plugin_media)
-target_include_directories(${PROJECT_NAME} PRIVATE 3rdparty/libisf/src/)
 
 # Target-specific options
 setup_score_plugin(${PROJECT_NAME})
+
+# Things to install :
+# - lib/clang/${LLVM_PACKAGE_VERSION}
+# - libc++
+# - Qt headers
+# - MinGW headers
+# install(DIRECTORY "${_srcDir}/"
+#         DESTINATION include/score
+#         COMPONENT Devel
+#         FILES_MATCHING
+#         PATTERN "*.hpp"
+#         PATTERN ".git" EXCLUDE
+#         PATTERN "tests" EXCLUDE
+#         PATTERN "Tests" EXCLUDE
+# )

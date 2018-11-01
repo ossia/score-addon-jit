@@ -37,17 +37,15 @@ struct ApplicationPlugin final
 {
   ApplicationPlugin(const score::GUIApplicationContext& ctx);
 
-  void generate_command_files(
-      const QString& output
-      , const QString& addon_path
-      , const std::vector<std::pair<QString, QString>>& files);
-
   void setupAddon(const QString& addon);
   void registerAddon(jit_plugin*);
   void updateAddon(const QString& addon);
+
+  void setupNode(const QString& addon);
   void initialize() override;
 
   QFileSystemWatcher m_addonsWatch;
+  QFileSystemWatcher m_nodesWatch;
   AddonCompiler m_compiler;
 };
 }

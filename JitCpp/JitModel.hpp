@@ -6,6 +6,9 @@
 #include <Process/Process.hpp>
 #include <Process/ProcessMetadata.hpp>
 
+#include <ossia/dataflow/execution_state.hpp>
+#include <ossia/dataflow/graph_node.hpp>
+
 #include <ossia/dataflow/node_process.hpp>
 
 #include <QDialog>
@@ -32,6 +35,55 @@ PROCESS_METADATA(
     , Process::ProcessFlags::ExternalEffect)
 namespace Jit
 {
+  struct jitted_node
+  {
+    std::unique_ptr<llvm::Module> module;
+    std::function<ossia::graph_node*()> factory;
+  };
+
+  struct jitted_node_ctx
+  {
+    struct init
+    {
+      init()
+      {
+
+        using namespace llvm;
+
+        sys::PrintStackTraceOnErrorSignal({});
+
+        atexit(llvm_shutdown);
+        InitializeNativeTarget();
+        InitializeNativeTargetAsmPrinter();
+        InitializeNativeTargetAsmParser();
+      }
+    } _init;
+    jitted_node_ctx() : X{0, nullptr}, jit{*llvm::EngineBuilder().selectTarget()}
+    {
+    }
+
+    jitted_node compile(std::string sourceCode, const std::vector<std::string>& additional_flags = {})
+    {
+      auto module = jit.compileModuleFromCpp(sourceCode, additional_flags, context);
+      if (!module)
+        throw jit_error{module.takeError()};
+
+      // Compile to machine code and link.
+      jit.submitModule(std::move(*module));
+      auto jitedFn
+          = jit.getFunction<ossia::graph_node*()>("score_graph_node_factory");
+      if (!jitedFn)
+        throw jit_error{jitedFn.takeError()};
+
+      llvm::outs().flush();
+      return {std::move(*module), *jitedFn};
+    }
+
+    llvm::PrettyStackTraceProgram X;
+    llvm::LLVMContext context;
+    SimpleOrcJit jit;
+  };
+
 class JitEffectModel : public Process::ProcessModel
 {
   friend class JitUI;
@@ -74,8 +126,8 @@ public:
     return m_outlets;
   }
 
-  jit_context ctx;
-  ossia::optional<jit_node> node;
+  jitted_node_ctx ctx;
+  ossia::optional<jitted_node> node;
 
 private:
   void init();
