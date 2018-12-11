@@ -16,7 +16,11 @@
 
 #include <iostream>
 
+#if __has_include(<../tools/driver/cc1_main.cpp>)
 #include <../tools/driver/cc1_main.cpp>
+#else
+#include "cc1_main.cpp"
+#endif
 namespace Jit
 {
 

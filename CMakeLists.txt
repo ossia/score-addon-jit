@@ -26,35 +26,37 @@ set(SRCS
 add_library(${PROJECT_NAME} ${SRCS} ${HDRS})
 
 set(LLVM_BUILD_MAIN_SRC_DIR /opt/llvm)
-find_package(LLVM 7.0 REQUIRED PATHS ${LLVM_DIR})
-include(${LLVM_BUILD_BINARY_DIR}/lib/cmake/clang/ClangTargets.cmake)
-
-if(EXISTS ${LLVM_BUILD_MAIN_SRC_DIR}/tools/clang)
-    set(CLANG_SRC_DIR_PREFIX tools) # sources in-tree (default build)
-elseif(EXISTS ${LLVM_BUILD_MAIN_SRC_DIR}/../clang)
-    set(CLANG_SRC_DIR_PREFIX ..) # sources out-of-tree (ENABLE_PROJECTS build)
+find_package(LLVM REQUIRED PATHS ${LLVM_DIR})
+if(LLVM_VERSION MATCHES "7.*" OR LLVM_VERSION MATCHES "8.*")
+    message("-- LLVM version: ${LLVM_VERSION}")
 else()
-    message(FATAL_ERROR "Cannot find Clang sources")
+    message(FATAL_ERROR "LLVM Version incompatible")
+endif()
+
+if(NOT WIN32)
+  include(${LLVM_BUILD_BINARY_DIR}/lib/cmake/clang/ClangTargets.cmake)
+
+  if(EXISTS ${LLVM_BUILD_MAIN_SRC_DIR}/tools/clang)
+      set(CLANG_SRC_DIR_PREFIX tools) # sources in-tree (default build)
+  elseif(EXISTS ${LLVM_BUILD_MAIN_SRC_DIR}/../clang)
+      set(CLANG_SRC_DIR_PREFIX ..) # sources out-of-tree (ENABLE_PROJECTS build)
+  else()
+      message(FATAL_ERROR "Cannot find Clang sources")
+  endif()
 endif()
 
 # LLVM definitions
 separate_arguments(LLVM_DEFINITIONS)
-llvm_map_components_to_libnames(LLVM_LIBS
-    core
-    executionengine
-    native
-    object
-    orcjit
-    runtimedyld
-    support
-)
-
 # Project-specific definitions
 target_include_directories(score_addon_jit PRIVATE
     ${LLVM_INCLUDE_DIRS}
+)
+if(NOT WIN32)
+  target_include_directories(score_addon_jit PRIVATE
     ${LLVM_BUILD_BINARY_DIR}/tools/clang/include
     ${LLVM_BUILD_MAIN_SRC_DIR}/${CLANG_SRC_DIR_PREFIX}/clang/include
-)
+  )
+endif()
 
 target_compile_definitions(score_addon_jit PRIVATE
     ${LLVM_DEFINITIONS}
@@ -69,7 +71,6 @@ target_compile_definitions(score_addon_jit
 
 # Clang dependencies
 target_link_libraries(score_addon_jit PRIVATE
-    LLVM
     clangARCMigrate
     clangBasic
     clangCodeGen
@@ -91,6 +92,21 @@ target_link_libraries(score_addon_jit PRIVATE
     clangRewrite
     clangLex
 )
+
+if(WIN32)
+  llvm_map_components_to_libnames(LLVM_LIBS
+    core
+    executionengine
+    native
+    object
+    orcjit
+    runtimedyld
+    support
+  )
+  target_link_libraries(score_addon_jit PRIVATE ${LLVM_LIBS} mincore clangCrossTU clangIndex)
+else()
+  target_link_libraries(score_addon_jit PRIVATE LLVM)
+endif()
 
 # Code generation
 score_generate_command_list_file(${PROJECT_NAME} "${HDRS}")
