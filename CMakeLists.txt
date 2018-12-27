@@ -6,6 +6,7 @@ project(score_addon_jit LANGUAGES CXX)
 
 # General initialization
 score_common_setup()
+
 # Source files
 set(HDRS
     JitCpp/JitModel.hpp
@@ -28,36 +29,18 @@ add_library(${PROJECT_NAME} ${SRCS} ${HDRS})
 set(LLVM_BUILD_MAIN_SRC_DIR /opt/llvm)
 find_package(LLVM REQUIRED PATHS ${LLVM_DIR})
 if(LLVM_VERSION MATCHES "7.*" OR LLVM_VERSION MATCHES "8.*")
-    message("-- LLVM version: ${LLVM_VERSION}")
+  message("-- LLVM version: ${LLVM_VERSION}")
 else()
-    message(FATAL_ERROR "LLVM Version incompatible")
-endif()
-
-if(NOT WIN32)
-  include(${LLVM_BUILD_BINARY_DIR}/lib/cmake/clang/ClangTargets.cmake)
-
-  if(EXISTS ${LLVM_BUILD_MAIN_SRC_DIR}/tools/clang)
-      set(CLANG_SRC_DIR_PREFIX tools) # sources in-tree (default build)
-  elseif(EXISTS ${LLVM_BUILD_MAIN_SRC_DIR}/../clang)
-      set(CLANG_SRC_DIR_PREFIX ..) # sources out-of-tree (ENABLE_PROJECTS build)
-  else()
-      message(FATAL_ERROR "Cannot find Clang sources")
-  endif()
+  message(FATAL_ERROR "LLVM Version incompatible")
 endif()
 
 # LLVM definitions
 separate_arguments(LLVM_DEFINITIONS)
+
 # Project-specific definitions
 target_include_directories(score_addon_jit PRIVATE
     ${LLVM_INCLUDE_DIRS}
 )
-if(NOT WIN32)
-  target_include_directories(score_addon_jit PRIVATE
-    ${LLVM_BUILD_BINARY_DIR}/tools/clang/include
-    ${LLVM_BUILD_MAIN_SRC_DIR}/${CLANG_SRC_DIR_PREFIX}/clang/include
-  )
-endif()
-
 target_compile_definitions(score_addon_jit PRIVATE
     ${LLVM_DEFINITIONS}
 )
