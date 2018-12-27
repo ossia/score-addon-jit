@@ -41,7 +41,7 @@
 #include <memory>
 #include <string>
 #include <vector>
-
+#include <chrono>
 extern int cc1_main(llvm::ArrayRef<const char*> Argv, const char* Argv0, void* MainAddr);
 namespace Jit
 {
@@ -355,6 +355,7 @@ struct jit_ctx : public std::enable_shared_from_this<jit_ctx>
       , const std::string& symbol
       , const std::vector<std::string>& additional_flags = {})
   {
+    auto t0 = std::chrono::high_resolution_clock::now();
     auto module = jit.compileModuleFromCpp(sourceCode, additional_flags, context);
     if (!module)
       throw jit_error{module.takeError()};
@@ -365,6 +366,8 @@ struct jit_ctx : public std::enable_shared_from_this<jit_ctx>
     if (!f)
       throw jit_error{f.takeError()};
 
+    auto t1 = std::chrono::high_resolution_clock::now();
+    std::cerr << "\n\nBUILD DURATION: " << std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count() << " ms \n\n";
     llvm::outs().flush();
     return {std::move(*module), *f, shared_from_this()};
   }

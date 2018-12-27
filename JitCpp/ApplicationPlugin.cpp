@@ -45,6 +45,7 @@ struct jit_plugin_context
 
   jit_plugin compile(const std::string& sourceCode, const std::vector<std::string>& flags)
   {
+    auto t0 = std::chrono::high_resolution_clock::now();
     auto module = jit.compileModuleFromCpp(sourceCode, flags, context);
     if (!module)
       throw jit_error{module.takeError()};
@@ -56,6 +57,8 @@ struct jit_plugin_context
       throw jit_error{jitedFn.takeError()};
 
     llvm::outs().flush();
+    auto t1 = std::chrono::high_resolution_clock::now();
+    std::cerr << "\n\nADDON BUILD DURATION: " << std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count() << " ms \n\n";
 
     return {std::move(*module), (*jitedFn)()};
   }
