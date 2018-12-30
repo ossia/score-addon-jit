@@ -5,8 +5,10 @@
 #include <iostream>
 #include <QApplication>
 #include <QDir>
+#include <QDirIterator>
 #include <QDebug>
 #include <llvm/Support/Host.h>
+#include <llvm/Config/llvm-config-64.h>
 #if defined(__has_feature)
   #if __has_feature(address_sanitizer) && !defined(__SANITIZE_ADDRESS__)
     #define __SANITIZE_ADDRESS__ 1
@@ -154,6 +156,43 @@ static inline void populateDefinitions(std::vector<std::string>& args)
   args.push_back("-D__STDC_LIMIT_MACROS");
 }
 
+static inline auto getPotentialTriples()
+{
+  std::vector<QString> triples;
+  triples.push_back(LLVM_DEFAULT_TARGET_TRIPLE);
+  triples.push_back(LLVM_HOST_TRIPLE);
+#if defined(__x86_64__)
+  triples.push_back("x86_64-pc-linux-gnu");
+#elif defined(__i686__)
+  triples.push_back("i686-pc-linux-gnu");
+#elif defined(__i586__)
+  triples.push_back("i586-pc-linux-gnu");
+#elif defined(__i486__)
+  triples.push_back("i486-pc-linux-gnu");
+#elif defined(__i386__)
+  triples.push_back("i386-pc-linux-gnu");
+#elif defined(__arm__)
+  triples.push_back("armv8-none-linux-gnueabi");
+  triples.push_back("armv8-pc-linux-gnueabi");
+  triples.push_back("armv8-none-linux-gnu");
+  triples.push_back("armv8-pc-linux-gnu");
+  triples.push_back("armv7-none-linux-gnueabi");
+  triples.push_back("armv7-pc-linux-gnueabi");
+  triples.push_back("armv7-none-linux-gnu");
+  triples.push_back("armv7-pc-linux-gnu");
+  triples.push_back("armv6-none-linux-gnueabi");
+  triples.push_back("armv6-pc-linux-gnueabi");
+  triples.push_back("armv6-none-linux-gnu");
+  triples.push_back("armv6-pc-linux-gnu");
+#elif defined(__aarch64__)
+  triples.push_back("aarch64-none-linux-gnueabi");
+  triples.push_back("aarch64-pc-linux-gnueabi");
+  triples.push_back("aarch64-none-linux-gnu");
+  triples.push_back("aarch64-pc-linux-gnu");
+#endif
+
+  return triples;
+}
 /**
  * @brief populateIncludeDirs Add paths to the relevant parts of the sdk
  *
@@ -201,11 +240,46 @@ static inline void populateIncludeDirs(std::vector<std::string>& args)
 
   auto include = [&] (const auto& path){ args.push_back("-I" + sdk + "/include/" + path); };
 
-#ifdef  _LIBCPP_VERSION
+#if defined(_LIBCPP_VERSION)
   include("c++/v1");
-#else
-  include("c++/8.2.1/x86_64-pc-linux-gnu");
-  include("c++/8.2.1");
+#elif defined(_GLIBCXX_RELEASE)
+  // Try to locate the correct libstdc++ folder
+  // TODO these are only heuristics. how to make them better ?
+  {
+    const auto libstdcpp_major = QString::number(_GLIBCXX_RELEASE);
+    QDir dir(QString::fromStdString(sdk));
+    if(!dir.cd("include"))
+      throw std::runtime_error("Unable to locate libstdc++");
+    if(!dir.cd("c++"))
+      throw std::runtime_error("Unable to locate libstdc++");
+
+    QDirIterator cpp_it{dir};
+    while(cpp_it.hasNext())
+    {
+      cpp_it.next();
+      auto ver = cpp_it.fileName();
+      if(!ver.isEmpty() && ver.startsWith(libstdcpp_major))
+      {
+        auto gcc = ver.toStdString();
+
+        // e.g. /usr/include/c++/8.2.1
+        include("c++/" + gcc);
+
+        dir.cd(QString::fromStdString(gcc));
+        for(auto& triple : getPotentialTriples())
+        {
+          if(dir.exists(triple))
+          {
+            // e.g. /usr/include/c++/8.2.1/x86_64-pc-linux-gnu
+            include("c++/" + gcc + "/" + triple.toStdString());
+            break;
+          }
+        }
+
+        break;
+      }
+    }
+  }
 #endif
 
   include("x86_64-linux-gnu"); // #debian
