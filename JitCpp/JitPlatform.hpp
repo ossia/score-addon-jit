@@ -291,7 +291,16 @@ static inline void populateIncludeDirs(std::vector<std::string>& args)
   include("qt/QtXml");
   include("qt/QtQml");
   include("qt/QtQuick");
+  include("qt/QtQuickWidgets");
   include("qt/QtNetwork");
+  include("qt/QtSvg");
+  include("qt/QtSql");
+  include("qt/QtOpenGL");
+  include("qt/QtQuickControls2");
+  include("qt/QtQuickShapes");
+  include("qt/QtQuickTemplates2");
+  include("qt/QtSerialBus");
+  include("qt/QtSerialPort");
 
 #if defined(SCORE_DEPLOYMENT_BUILD)
   include("score");

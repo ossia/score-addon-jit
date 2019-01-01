@@ -6,14 +6,23 @@ project(score_addon_jit LANGUAGES CXX)
 
 # General initialization
 score_common_setup()
+find_package(Qt5 5.12 REQUIRED COMPONENTS QuickWidgets)
 
 # Source files
 set(HDRS
+    JitCpp/EditScript.hpp
     JitCpp/JitModel.hpp
     JitCpp/Jit.hpp
     JitCpp/JitPlatform.hpp
     JitCpp/JitExecutor.hpp
     JitCpp/ApplicationPlugin.hpp
+
+    PluginSettings/PluginSettings.hpp
+    PluginSettings/PluginSettingsModel.hpp
+    PluginSettings/PluginSettingsPresenter.hpp
+    PluginSettings/PluginSettingsView.hpp
+    PluginSettings/PluginItemModel.hpp
+    PluginSettings/FileDownloader.hpp
     score_addon_jit.hpp
 )
 
@@ -21,6 +30,12 @@ set(SRCS
     JitCpp/JitModel.cpp
     JitCpp/JitExecutor.cpp
     JitCpp/ApplicationPlugin.cpp
+
+    PluginSettings/PluginSettingsModel.cpp
+    PluginSettings/PluginSettingsPresenter.cpp
+    PluginSettings/PluginSettingsView.cpp
+    PluginSettings/PluginItemModel.cpp
+    PluginSettings/FileDownloader.cpp
     score_addon_jit.cpp
 )
 
@@ -95,7 +110,7 @@ endif()
 score_generate_command_list_file(${PROJECT_NAME} "${HDRS}")
 
 # Link
-target_link_libraries(${PROJECT_NAME} PUBLIC score_plugin_engine score_plugin_media)
+target_link_libraries(${PROJECT_NAME} PUBLIC score_plugin_engine score_plugin_media score_plugin_library Qt5::QuickWidgets)
 
 # Target-specific options
 setup_score_plugin(${PROJECT_NAME})

@@ -39,9 +39,13 @@
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdio>
-
+#include <iostream>
 #ifdef CLANG_HAVE_RLIMITS
 #include <sys/resource.h>
+
+#include <llvm/Support/raw_ostream.h>
+
+#include <clang/Frontend/TextDiagnosticPrinter.h>
 #endif
 
 using namespace clang;
@@ -164,7 +168,26 @@ static void ensureSufficientStack() {
 static void ensureSufficientStack() {}
 #endif
 
-int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
+class QtDiagnosticConsumer final
+        : public DiagnosticConsumer
+{
+
+
+    // DiagnosticConsumer interface
+public:
+    void finish() override
+    {
+        std::cerr << " == finish == \n";
+    }
+    void HandleDiagnostic(DiagnosticsEngine::Level DiagLevel, const Diagnostic& Info) override
+    {
+        SmallVector<char, 1024> vec;
+        Info.FormatDiagnostic(vec);
+        std::cerr << " == diagnostic == " << vec.data() << "\n";
+    }
+};
+
+int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr, DiagnosticConsumer* diagnostics) {
   ensureSufficientStack();
 
   std::unique_ptr<CompilerInstance> Clang(new CompilerInstance());
@@ -201,7 +224,7 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
       CompilerInvocation::GetResourcesPath(Argv0, MainAddr);
 
   // Create the actual diagnostics engine.
-  Clang->createDiagnostics();
+  Clang->createDiagnostics(diagnostics, false);
   if (!Clang->hasDiagnostics())
     return 1;
 

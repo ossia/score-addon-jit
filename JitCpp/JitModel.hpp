@@ -8,7 +8,6 @@
 
 #include <ossia/dataflow/execution_state.hpp>
 #include <ossia/dataflow/graph_node.hpp>
-
 #include <ossia/dataflow/node_process.hpp>
 
 #include <QDialog>
@@ -58,29 +57,9 @@ namespace Jit
         InitializeNativeTargetAsmParser();
       }
     } _init;
-    jitted_node_ctx() : X{0, nullptr}, jit{*llvm::EngineBuilder().selectTarget()}
-    {
-    }
+    jitted_node_ctx();
 
-    jitted_node compile(std::string sourceCode, const std::vector<std::string>& additional_flags = {})
-    {
-      auto t0 = std::chrono::high_resolution_clock::now();
-      auto module = jit.compileModuleFromCpp(sourceCode, additional_flags, context);
-      if (!module)
-        throw jit_error{module.takeError()};
-
-      // Compile to machine code and link.
-      jit.submitModule(std::move(*module));
-      auto jitedFn
-          = jit.getFunction<ossia::graph_node*()>("score_graph_node_factory");
-      if (!jitedFn)
-        throw jit_error{jitedFn.takeError()};
-
-      auto t1 = std::chrono::high_resolution_clock::now();
-      std::cerr << "\n\nBUILD DURATION: " << std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count() << " ms \n\n";
-      llvm::outs().flush();
-      return {std::move(*module), *jitedFn};
-    }
+    jitted_node compile(std::string sourceCode, const std::vector<std::string>& additional_flags = {});
 
     llvm::PrettyStackTraceProgram X;
     llvm::LLVMContext context;
@@ -94,6 +73,7 @@ class JitEffectModel : public Process::ProcessModel
   SCORE_SERIALIZE_FRIENDS
   PROCESS_METADATA_IMPL(JitEffectModel)
 
+  W_OBJECT(JitEffectModel)
 public:
   JitEffectModel(
       TimeVal t, const QString& jitProgram, const Id<Process::ProcessModel>&,
@@ -108,17 +88,18 @@ public:
     init();
   }
 
-  const QString& text() const
+  const QString& script() const
   {
     return m_text;
   }
 
-  static constexpr bool hasExternalUI()
+  static constexpr bool hasExternalUI() noexcept
   {
-    return false;
+    return true;
   }
+
   QString prettyName() const noexcept override;
-  void setText(const QString& txt);
+  void setScript(const QString& txt);
 
   Process::Inlets& inlets()
   {
@@ -132,6 +113,7 @@ public:
   jitted_node_ctx ctx;
   ossia::optional<jitted_node> node;
 
+  void errorMessage(const QString& e) W_SIGNAL(errorMessage, e)
 private:
   void init();
   void reload();
@@ -157,6 +139,7 @@ struct JitEditDialog : public QDialog
   const JitEffectModel& m_effect;
 
   QPlainTextEdit* m_textedit{};
+  QPlainTextEdit* m_error{};
 
 public:
   JitEditDialog(

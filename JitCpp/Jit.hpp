@@ -42,7 +42,9 @@
 #include <string>
 #include <vector>
 #include <chrono>
-extern int cc1_main(llvm::ArrayRef<const char*> Argv, const char* Argv0, void* MainAddr);
+#include <sstream>
+#include <clang/Frontend/TextDiagnosticBuffer.h>
+extern int cc1_main(llvm::ArrayRef<const char*> Argv, const char* Argv0, void* MainAddr, clang::DiagnosticConsumer*);
 namespace Jit
 {
 
@@ -167,8 +169,16 @@ public:
         args.begin(), args.end(), std::back_inserter(argsX),
         [](const std::string& s) { return s.c_str(); });
 
-    if (int res = cc1_main(argsX, "", nullptr))
-      return return_code_error("Clang cc1 compilation failed", res);
+
+    auto diags = std::make_unique<clang::TextDiagnosticBuffer>();
+
+    if (int res = cc1_main(argsX, "", nullptr, diags.get()))
+    {
+      std::stringstream ss;
+      for(auto it = diags->err_begin(); it != diags->err_end(); ++it)
+        ss << "error : " << it->second << "\n";
+      return return_code_error(ss.str(), res);
+    }
 
     return llvm::Error::success();
   }
@@ -307,18 +317,25 @@ private:
   }
 };
 
-struct jit_error : std::runtime_error
+struct jit_error final
+    : std::runtime_error
 {
   using std::runtime_error::runtime_error;
-  jit_error(llvm::Error E) : std::runtime_error{"JIT error"}
+  jit_error(llvm::Error E)
+    : std::runtime_error{"JIT error"}
   {
     llvm::handleAllErrors(std::move(E), [&](const llvm::ErrorInfoBase& EI) {
-      llvm::errs() << "Fatal Error: ";
-      EI.log(llvm::errs());
-      llvm::errs() << "\n";
-      llvm::errs().flush();
+      m_err = EI.message();
     });
   }
+
+  const char* what() const noexcept override
+  {
+    return m_err.c_str();
+  }
+
+private:
+  std::string m_err;
 };
 
 
