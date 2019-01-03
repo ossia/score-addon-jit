@@ -63,7 +63,7 @@ namespace Jit
 
     llvm::PrettyStackTraceProgram X;
     llvm::LLVMContext context;
-    SimpleOrcJit jit;
+    JitCompiler jit;
   };
 
 class JitEffectModel : public Process::ProcessModel

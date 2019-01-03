@@ -10,6 +10,14 @@
 
 score_addon_jit::score_addon_jit()
 {
+  using namespace llvm;
+
+  sys::PrintStackTraceOnErrorSignal({});
+
+  atexit(llvm_shutdown);
+  InitializeNativeTarget();
+  InitializeNativeTargetAsmPrinter();
+  InitializeNativeTargetAsmParser();
 }
 
 score_addon_jit::~score_addon_jit()

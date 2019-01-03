@@ -228,16 +228,16 @@ jitted_node_ctx::jitted_node_ctx()
 jitted_node jitted_node_ctx::compile(std::string sourceCode, const std::vector<std::string>& additional_flags)
 {
   auto t0 = std::chrono::high_resolution_clock::now();
-  auto module = jit.compileModuleFromCpp(sourceCode, additional_flags, context);
+  auto module = jit.compileModule(sourceCode, additional_flags, context);
   if (!module)
-    throw jit_error{module.takeError()};
+    throw Exception{module.takeError()};
 
   // Compile to machine code and link.
   jit.submitModule(std::move(*module));
   auto jitedFn
       = jit.getFunction<ossia::graph_node*()>("score_graph_node_factory");
   if (!jitedFn)
-    throw jit_error{jitedFn.takeError()};
+    throw Exception{jitedFn.takeError()};
 
   auto t1 = std::chrono::high_resolution_clock::now();
   std::cerr << "\n\nBUILD DURATION: " << std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count() << " ms \n\n";

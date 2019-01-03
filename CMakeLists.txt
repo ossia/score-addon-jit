@@ -10,12 +10,17 @@ find_package(Qt5 5.12 REQUIRED COMPONENTS QuickWidgets)
 
 # Source files
 set(HDRS
+    JitCpp/AddonCompiler.hpp
+    JitCpp/NodeCompiler.hpp
     JitCpp/EditScript.hpp
+    JitCpp/ClangDriver.hpp
     JitCpp/JitModel.hpp
     JitCpp/Jit.hpp
+    JitCpp/JitUtils.hpp
     JitCpp/JitPlatform.hpp
     JitCpp/JitExecutor.hpp
     JitCpp/ApplicationPlugin.hpp
+    JitCpp/MetadataGenerator.hpp
 
     PluginSettings/PluginSettings.hpp
     PluginSettings/PluginSettingsModel.hpp
@@ -27,8 +32,10 @@ set(HDRS
 )
 
 set(SRCS
+    JitCpp/AddonCompiler.cpp
     JitCpp/JitModel.cpp
     JitCpp/JitExecutor.cpp
+    JitCpp/ClangDriver.cpp
     JitCpp/ApplicationPlugin.cpp
 
     PluginSettings/PluginSettingsModel.cpp
