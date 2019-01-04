@@ -1,15 +1,51 @@
 #include <JitCpp/ClangDriver.hpp>
+#include <score/tools/Todo.hpp>
+#include <QCryptographicHash>
+#include <QStandardPaths>
+#include <sstream>
+
+extern int cc1_main(llvm::ArrayRef<const char*> Argv, const char* Argv0, void* MainAddr, clang::DiagnosticConsumer*);
 
 namespace Jit
 {
 
 ClangCC1Driver::~ClangCC1Driver()
 {
+  // As long as the driver exists, source files remain on disk to allow
+  // debugging JITed code.
   for (const auto& D : m_deleters)
     D();
 }
 
-llvm::Expected<std::unique_ptr<llvm::Module> > ClangCC1Driver::compileTranslationUnit(const std::string& cppCode, const std::vector<std::string>& flags, llvm::LLVMContext& context)
+QDir ClangCC1Driver::bitcodeDatabase()
+{
+  auto caches = QStandardPaths::standardLocations(QStandardPaths::CacheLocation);
+  if(caches.empty())
+    caches = QStandardPaths::standardLocations(QStandardPaths::TempLocation);
+  if(caches.empty())
+    caches = QStandardPaths::standardLocations(QStandardPaths::AppDataLocation);
+  if(caches.empty())
+    return {};
+
+  return QDir{caches.front() + "/score-jit"};
+}
+
+static QString hashFile(const QString& path)
+{
+  QFile f{path};
+  SCORE_ASSERT(f.open(QIODevice::ReadOnly));
+
+  QCryptographicHash hash{QCryptographicHash::Sha1};
+  hash.addData(&f);
+
+  return hash.result().toBase64();
+}
+
+llvm::Expected<std::unique_ptr<llvm::Module>>
+ClangCC1Driver::compileTranslationUnit(
+    const std::string& cppCode
+    , const std::vector<std::string>& flags
+    , llvm::LLVMContext& context)
 {
   auto sourceFileName = saveSourceFile(cppCode);
   if (!sourceFileName)
@@ -17,10 +53,10 @@ llvm::Expected<std::unique_ptr<llvm::Module> > ClangCC1Driver::compileTranslatio
 
   std::string cpp = *sourceFileName;
   std::string preproc = replaceExtension(cpp, "preproc.cpp");
-  std::string bc = replaceExtension(cpp, "bc");
+  std::string bc;
 
   // Default flags
-  auto flags_vec = getClangCC1Args(cpp, bc);
+  auto flags_vec = getClangCC1Args();
   flags_vec.push_back("-main-file-name");
   flags_vec.push_back(cpp);
   flags_vec.push_back("-x");
@@ -42,20 +78,50 @@ llvm::Expected<std::unique_ptr<llvm::Module> > ClangCC1Driver::compileTranslatio
     if (err)
       return std::move(err);
   }
-  // THen if there isn't a matching bitcode file, do the actual build
-  flags_vec.resize(flags_vec.size() - 5);
-  flags_vec.push_back("-o");
-  flags_vec.push_back(bc);
-  flags_vec.push_back(cpp);
 
+  const auto cache_dir = bitcodeDatabase();
+
+  auto preproc_hash = hashFile(QString::fromStdString(preproc));
   {
+
+    if(cache_dir.exists())
+    {
+      QDirIterator it(cache_dir);
+      while(it.hasNext())
+      {
+        it.next();
+        auto fi = it.fileInfo();
+        if(fi.fileName() == preproc_hash + ".bc")
+        {
+          bc = fi.absoluteFilePath().toStdString();
+          break;
+        }
+      }
+    }
+  }
+
+  // If there isn't a matching bitcode file, do the actual C++ -> bitcode compilation
+  if(bc.empty())
+  {
+    bc = replaceExtension(cpp, "bc");
+    flags_vec.resize(flags_vec.size() - 5);
+    flags_vec.push_back("-o");
+    flags_vec.push_back(bc);
+    flags_vec.push_back(cpp);
+
     Timer t;
     llvm::Error err = compileCppToBitcodeFile(flags_vec);
     if (err)
       return std::move(err);
+
+    if(cache_dir.exists())
+    {
+      QFile f(QString::fromStdString(bc));
+      f.copy(cache_dir.absolutePath() + "/" + preproc_hash + ".bc");
+    }
   }
 
-  // Else...
+  // Load the bitcode
   Timer t;
   auto module = readModuleFromBitcodeFile(bc, context);
 
@@ -72,7 +138,7 @@ llvm::Expected<std::unique_ptr<llvm::Module> > ClangCC1Driver::compileTranslatio
   return std::move(*module);
 }
 
-std::vector<std::string> ClangCC1Driver::getClangCC1Args(llvm::StringRef cpp, llvm::StringRef bc)
+std::vector<std::string> ClangCC1Driver::getClangCC1Args()
 {
   std::vector<std::string> args;
 
