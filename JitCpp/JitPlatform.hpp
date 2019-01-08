@@ -8,7 +8,12 @@
 #include <QDirIterator>
 #include <QDebug>
 #include <llvm/Support/Host.h>
+#if __has_include(<llvm/Config/llvm-config-64.h>)
 #include <llvm/Config/llvm-config-64.h>
+#elif __has_include(<llvm/Config/llvm-config.h>)
+#include <llvm/Config/llvm-config.h>
+#endif
+
 #if defined(__has_feature)
   #if __has_feature(address_sanitizer) && !defined(__SANITIZE_ADDRESS__)
     #define __SANITIZE_ADDRESS__ 1
