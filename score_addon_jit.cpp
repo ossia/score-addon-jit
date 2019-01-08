@@ -5,12 +5,24 @@
 #include <JitCpp/JitModel.hpp>
 #include <JitCpp/ApplicationPlugin.hpp>
 
+#include <PluginSettings/PluginSettings.hpp>
+#include <QQuickWidget>
+
 score_addon_jit::score_addon_jit()
 {
+  using namespace llvm;
+
+  sys::PrintStackTraceOnErrorSignal({});
+
+  atexit(llvm_shutdown);
+  InitializeNativeTarget();
+  InitializeNativeTargetAsmPrinter();
+  InitializeNativeTargetAsmParser();
 }
 
 score_addon_jit::~score_addon_jit()
 {
+  delete new QQuickWidget;
 }
 
 std::vector<std::unique_ptr<score::InterfaceBase>> score_addon_jit::factories(
@@ -21,7 +33,8 @@ std::vector<std::unique_ptr<score::InterfaceBase>> score_addon_jit::factories(
       FW<Process::ProcessModelFactory, Jit::JitEffectFactory>,
       FW<Process::LayerFactory, Jit::LayerFactory>,
       FW<Execution::ProcessComponentFactory,
-         Execution::JitEffectComponentFactory>>(ctx, key);
+         Execution::JitEffectComponentFactory>,
+      FW<score::SettingsDelegateFactory, PluginSettings::Factory>>(ctx, key);
 }
 
 score::GUIApplicationPlugin*

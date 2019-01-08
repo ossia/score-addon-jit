@@ -8,7 +8,6 @@
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 #include <llvm/ADT/SmallString.h>
 #include <llvm/ADT/StringRef.h>
-#include <llvm/Bitcode/BitcodeReader.h>
 #include <llvm/ExecutionEngine/ExecutionEngine.h>
 #include <llvm/ExecutionEngine/JITEventListener.h>
 #include <llvm/ExecutionEngine/Orc/CompileUtils.h>
@@ -30,158 +29,27 @@
 #include <llvm/Support/Error.h>
 #include <llvm/Support/FileSystem.h>
 #include <llvm/Support/ManagedStatic.h>
-#include <llvm/Support/MemoryBuffer.h>
 #include <llvm/Support/PrettyStackTrace.h>
 #include <llvm/Support/Signals.h>
 #include <llvm/Support/TargetSelect.h>
 #include <llvm/Support/raw_ostream.h>
 
-#include <JitCpp/JitPlatform.hpp>
+#include <JitCpp/ClangDriver.hpp>
 #include <functional>
 #include <memory>
 #include <string>
 #include <vector>
 #include <chrono>
-extern int cc1_main(llvm::ArrayRef<const char*> Argv, const char* Argv0, void* MainAddr);
+#include <sstream>
+
 namespace Jit
 {
 
-inline llvm::Expected<std::unique_ptr<llvm::Module>>
-readModuleFromBitcodeFile(llvm::StringRef bc, llvm::LLVMContext& context)
-{
-  llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> buffer
-      = llvm::MemoryBuffer::getFile(bc);
-  if (!buffer)
-    return llvm::errorCodeToError(buffer.getError());
-
-  return llvm::parseBitcodeFile(buffer.get()->getMemBufferRef(), context);
-}
-
-
-class ClangCC1Driver
-{
-public:
-  ClangCC1Driver() = default;
-
-  // As long as the driver exists, source files remain on disk to allow
-  // debugging JITed code.
-  ~ClangCC1Driver()
-  {
-    for (const auto& D : SourceFileDeleters)
-      D();
-  }
-  static std::vector<std::string>
-  getClangCC1Args(llvm::StringRef cpp, llvm::StringRef bc)
-  {
-    std::vector<std::string> args;
-
-    args.push_back("-emit-llvm");
-    args.push_back("-emit-llvm-bc");
-    args.push_back("-emit-llvm-uselists");
-
-    args.push_back("-main-file-name");
-    args.push_back(cpp.data());
-
-    populateIncludeDirs(args);
-    populateCompileOptions(args);
-    populateDefinitions(args);
-
-    args.push_back("-o");
-    args.push_back(bc.data());
-    args.push_back("-x");
-    args.push_back("c++");
-    args.push_back(cpp.data());
-
-    for(const auto& arg : args)
-    {
-      std::cerr << " -- " << arg << std::endl;
-    }
-
-    return args;
-  }
-
-  llvm::Expected<std::unique_ptr<llvm::Module>>
-  compileTranslationUnit(const std::string& cppCode, const std::vector<std::string>& flags, llvm::LLVMContext& context)
-  {
-    auto sourceFileName = saveSourceFile(cppCode);
-    if (!sourceFileName)
-      return sourceFileName.takeError();
-
-    std::string cpp = *sourceFileName;
-    std::string bc = replaceExtension(cpp, "bc");
-
-    auto flags_vec = getClangCC1Args(cpp, bc);
-    flags_vec.insert(flags_vec.end(), flags.begin(), flags.end());
-    llvm::Error err = compileCppToBitcodeFile(flags_vec);
-    if (err)
-      return std::move(err);
-
-    auto module = readModuleFromBitcodeFile(bc, context);
-
-    llvm::sys::fs::remove(bc);
-
-    if (!module)
-    {
-      llvm::sys::fs::remove(cpp);
-      return module.takeError();
-    }
-
-    SourceFileDeleters.push_back([cpp]() { llvm::sys::fs::remove(cpp); });
-
-    return std::move(*module);
-  }
-
-  static llvm::Error return_code_error(llvm::StringRef message, int returnCode)
-  {
-    return llvm::make_error<llvm::StringError>(
-        message, std::error_code(returnCode, std::system_category()));
-  }
-
-  static llvm::Expected<std::string> saveSourceFile(const std::string& content)
-  {
-    using llvm::sys::fs::createTemporaryFile;
-
-    int fd;
-    llvm::SmallString<128> name;
-    if (auto ec = createTemporaryFile("score-addon-cpp", "cpp", fd, name))
-      return llvm::errorCodeToError(ec);
-
-    constexpr bool shouldClose = true;
-    constexpr bool unbuffered = true;
-    llvm::raw_fd_ostream os(fd, shouldClose, unbuffered);
-    os << content;
-
-    return name.str();
-  }
-
-  static std::string
-  replaceExtension(llvm::StringRef name, llvm::StringRef ext)
-  {
-    return name.substr(0, name.find_last_of('.') + 1).str() + ext.str();
-  }
-
-  static llvm::Error compileCppToBitcodeFile(std::vector<std::string> args)
-  {
-    std::vector<const char*> argsX;
-    std::transform(
-        args.begin(), args.end(), std::back_inserter(argsX),
-        [](const std::string& s) { return s.c_str(); });
-
-    if (int res = cc1_main(argsX, "", nullptr))
-      return return_code_error("Clang cc1 compilation failed", res);
-
-    return llvm::Error::success();
-  }
-
-private:
-  std::vector<std::function<void()>> SourceFileDeleters;
-};
-
-class SimpleOrcJit
+class JitCompiler
 {
   struct NotifyObjectLoaded_t
   {
-    NotifyObjectLoaded_t(SimpleOrcJit& jit) : Jit(jit)
+    NotifyObjectLoaded_t(JitCompiler& jit) : Jit(jit)
     {
     }
 
@@ -200,7 +68,7 @@ class SimpleOrcJit
     }
 
   private:
-    SimpleOrcJit& Jit;
+    JitCompiler& Jit;
   };
 
   using ModulePtr_t = std::unique_ptr<llvm::Module>;
@@ -213,7 +81,7 @@ class SimpleOrcJit
   llvm::orc::ExecutionSession es;
 public:
   std::shared_ptr<llvm::RuntimeDyld::MemoryManager> m_memoryManager = std::make_shared<llvm::SectionMemoryManager>();
-  SimpleOrcJit(llvm::TargetMachine& targetMachine)
+  JitCompiler(llvm::TargetMachine& targetMachine)
       : DL(targetMachine.createDataLayout())
       , SymbolResolverPtr{llvm::orc::createLegacyLookupResolver(es, [&] (const std::string& name) {
     if(auto res = findSymbolInJITedCode(name))
@@ -233,6 +101,30 @@ public:
     GdbEventListener = llvm::JITEventListener::createGDBRegistrationListener();
   }
 
+  std::unique_ptr<llvm::Module> compile(
+      const std::string& cppCode
+      , const std::vector<std::string>& flags
+      , llvm::LLVMContext& context)
+  {
+    auto module = compileModule(cppCode, flags, context);
+    if (!module)
+      throw Exception{module.takeError()};
+
+    // Compile to machine code and link.
+    submitModule(std::move(*module));
+
+    return std::move(*module);
+  }
+
+  llvm::Expected<std::unique_ptr<llvm::Module>>
+  compileModule(
+      const std::string& cppCode
+      , const std::vector<std::string>& flags
+      , llvm::LLVMContext& context)
+  {
+    return ClangDriver.compileTranslationUnit(cppCode, flags, context);
+  }
+
   void submitModule(ModulePtr_t module)
   {
     // Commit module for compilation to machine code. Actual compilation
@@ -242,12 +134,6 @@ public:
     k++;
     llvm::cantFail(
         CompileLayer.addModule(k, std::move(module)));
-  }
-
-  llvm::Expected<std::unique_ptr<llvm::Module>>
-  compileModuleFromCpp(const std::string& cppCode, const std::vector<std::string>& flags, llvm::LLVMContext& context)
-  {
-    return ClangDriver.compileTranslationUnit(cppCode, flags, context);
   }
 
   template <class Signature_t>
@@ -272,22 +158,13 @@ public:
   }
 
 private:
-  llvm::DataLayout DL;
-  ClangCC1Driver ClangDriver;
-  std::shared_ptr<llvm::orc::SymbolResolver> SymbolResolverPtr;
-  NotifyObjectLoaded_t NotifyObjectLoaded;
-  llvm::JITEventListener* GdbEventListener;
-
-  ObjectLayer_t ObjectLayer;
-  CompileLayer_t CompileLayer;
-
   llvm::JITSymbol findSymbolInJITedCode(std::string mangledName)
   {
     constexpr bool exportedSymbolsOnly = false;
     return CompileLayer.findSymbol(mangledName, exportedSymbolsOnly);
   }
 
-  llvm::JITSymbol findSymbolInHostProcess(std::string mangledName)
+  llvm::JITSymbol findSymbolInHostProcess(std::string mangledName) const
   {
     // Lookup function address in the host symbol table.
     if (llvm::JITTargetAddress addr
@@ -298,85 +175,21 @@ private:
   }
 
   // System name mangler: may prepend '_' on OSX or '\x1' on Windows
-  std::string mangle(std::string name)
+  std::string mangle(std::string name) const noexcept
   {
     std::string buffer;
     llvm::raw_string_ostream ostream(buffer);
     llvm::Mangler::getNameWithPrefix(ostream, std::move(name), DL);
     return ostream.str();
   }
+
+  llvm::DataLayout DL;
+  ClangCC1Driver ClangDriver;
+  std::shared_ptr<llvm::orc::SymbolResolver> SymbolResolverPtr;
+  NotifyObjectLoaded_t NotifyObjectLoaded;
+  llvm::JITEventListener* GdbEventListener;
+
+  ObjectLayer_t ObjectLayer;
+  CompileLayer_t CompileLayer;
 };
-
-struct jit_error : std::runtime_error
-{
-  using std::runtime_error::runtime_error;
-  jit_error(llvm::Error E) : std::runtime_error{"JIT error"}
-  {
-    llvm::handleAllErrors(std::move(E), [&](const llvm::ErrorInfoBase& EI) {
-      llvm::errs() << "Fatal Error: ";
-      EI.log(llvm::errs());
-      llvm::errs() << "\n";
-      llvm::errs().flush();
-    });
-  }
-};
-
-
-
-struct jit_ctx;
-struct jit_object
-{
-  std::unique_ptr<llvm::Module> module;
-  std::function<void*()> factory;
-  std::shared_ptr<jit_ctx> context;
-};
-struct jit_ctx : public std::enable_shared_from_this<jit_ctx>
-{
-  static inline struct init
-  {
-    init()
-    {
-      using namespace llvm;
-
-      sys::PrintStackTraceOnErrorSignal({});
-
-      atexit(llvm_shutdown);
-      InitializeNativeTarget();
-      InitializeNativeTargetAsmPrinter();
-      InitializeNativeTargetAsmParser();
-    }
-  } _init;
-  jit_ctx() : X{0, nullptr}, jit{*llvm::EngineBuilder().selectTarget()}
-  {
-  }
-
-  jit_object compile(
-      const std::string& sourceCode
-      , const std::string& symbol
-      , const std::vector<std::string>& additional_flags = {})
-  {
-    auto t0 = std::chrono::high_resolution_clock::now();
-    auto module = jit.compileModuleFromCpp(sourceCode, additional_flags, context);
-    if (!module)
-      throw jit_error{module.takeError()};
-
-    // Compile to machine code and link.
-    jit.submitModule(std::move(*module));
-    auto f = jit.getFunction<void*()>(symbol);
-    if (!f)
-      throw jit_error{f.takeError()};
-
-    auto t1 = std::chrono::high_resolution_clock::now();
-    std::cerr << "\n\nBUILD DURATION: " << std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count() << " ms \n\n";
-    llvm::outs().flush();
-    return {std::move(*module), *f, shared_from_this()};
-  }
-
-  llvm::PrettyStackTraceProgram X;
-  llvm::LLVMContext context;
-  SimpleOrcJit jit;
-};
-
-
-
 }

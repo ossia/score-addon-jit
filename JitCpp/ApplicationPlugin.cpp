@@ -1,5 +1,6 @@
 #include <JitCpp/ApplicationPlugin.hpp>
 #include <JitCpp/Jit.hpp>
+#include <JitCpp/MetadataGenerator.hpp>
 
 #include <Library/LibrarySettings.hpp>
 
@@ -17,91 +18,8 @@
 #include <QDir>
 #include <QThread>
 #include <QDirIterator>
-#include <wobjectimpl.h>
-
-W_OBJECT_IMPL(Jit::AddonCompiler)
-
 namespace Jit
 {
-struct jit_plugin_context
-{
-  struct init
-  {
-    init()
-    {
-      using namespace llvm;
-
-      sys::PrintStackTraceOnErrorSignal({});
-
-      atexit(llvm_shutdown);
-      InitializeNativeTarget();
-      InitializeNativeTargetAsmPrinter();
-      InitializeNativeTargetAsmParser();
-    }
-  } _init;
-  jit_plugin_context() : X{0, nullptr}, jit{*llvm::EngineBuilder().selectTarget()}
-  {
-  }
-
-  jit_plugin compile(const std::string& sourceCode, const std::vector<std::string>& flags)
-  {
-    auto t0 = std::chrono::high_resolution_clock::now();
-    auto module = jit.compileModuleFromCpp(sourceCode, flags, context);
-    if (!module)
-      throw jit_error{module.takeError()};
-
-    // Compile to machine code and link.
-    jit.submitModule(std::move(*module));
-    auto jitedFn = jit.getFunction<score::Plugin_QtInterface* ()>("plugin_instance");
-    if (!jitedFn)
-      throw jit_error{jitedFn.takeError()};
-
-    llvm::outs().flush();
-    auto t1 = std::chrono::high_resolution_clock::now();
-    std::cerr << "\n\nADDON BUILD DURATION: " << std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count() << " ms \n\n";
-
-    return {std::move(*module), (*jitedFn)()};
-  }
-
-  llvm::PrettyStackTraceProgram X;
-  llvm::LLVMContext context;
-  SimpleOrcJit jit;
-};
-
-static std::vector<std::unique_ptr<jit_plugin_context>> ctx;
-AddonCompiler::AddonCompiler()
-{
-  ctx.reserve(1024);
-  connect(this, &AddonCompiler::submitJob, this, &AddonCompiler::on_job, Qt::QueuedConnection);
-  this->moveToThread(&m_thread);
-  m_thread.start();
-}
-
-AddonCompiler::~AddonCompiler()
-{
-  m_thread.exit(0);
-  m_thread.wait();
-}
-
-void AddonCompiler::on_job(const std::string& cpp, const std::vector<std::string>& flags)
-{
-  try
-  {
-    static std::list<jit_plugin> plugs;
-
-    ctx.push_back(std::make_unique<jit_plugin_context>());
-    auto plug = ctx.back()->compile(cpp, flags);
-    if(plug.plugin)
-    {
-      plugs.push_front(std::move(plug));
-      jobCompleted(&plugs.front());
-    }
-  }
-  catch(const std::runtime_error& e) {
-    qDebug() << "could not compile plug-in: " << e.what();
-  }
-}
-
 ApplicationPlugin::ApplicationPlugin(const score::GUIApplicationContext& ctx)
   : score::GUIApplicationPlugin{ctx}
 {
@@ -120,19 +38,9 @@ ApplicationPlugin::ApplicationPlugin(const score::GUIApplicationContext& ctx)
 void ApplicationPlugin::initialize()
 {
   const auto& libpath = context.settings<Library::Settings::Model>().getPath();
-  {
-    auto addons = libpath + "/Addons";
-    m_addonsWatch.addPath(addons);
-    QDirIterator it{addons, QDir::Filter::Dirs | QDir::Filter::NoDotAndDotDot, QDirIterator::NoIteratorFlags};
-    while(it.hasNext())
-    {
-      it.next();
-      setupAddon(it.fileInfo().filePath());
-    }
-  }
 
   {
-    auto nodes = libpath + "/Addons/Nodes";
+    auto nodes = libpath + "/Nodes";
     m_nodesWatch.addPath(nodes);
 
     QDirIterator it{nodes, QDir::Filter::Files | QDir::Filter::NoDotAndDotDot, QDirIterator::Subdirectories};
@@ -143,156 +51,19 @@ void ApplicationPlugin::initialize()
       setupNode(path);
     }
   }
-}
 
-static void generateCommandFiles(
-    const QString& output
-    , const QString& addon_path
-    , const std::vector<std::pair<QString, QString>>& files)
-{
-  QRegularExpression decl("SCORE_COMMAND_DECL\\([A-Za-z_0-9,:<>\r\n\t ]*\\(\\)[A-Za-z_0-9,\"':<>\r\n\t ]*\\)");
-  QRegularExpression decl_t("SCORE_COMMAND_DECL_T\\([A-Za-z_0-9,:<>\r\n\t ]*\\)");
-
-  QString includes;
-  QString commands;
-  for(const auto& f : files)
   {
+    auto addons = libpath + "/Addons";
+    m_addonsWatch.addPath(addons);
+    QDirIterator it{addons, QDir::Filter::Dirs | QDir::Filter::NoDotAndDotDot, QDirIterator::NoIteratorFlags};
+    while(it.hasNext())
     {
-      auto res = decl.globalMatch(f.second);
-      while(res.hasNext())
-      {
-        auto match = res.next();
-        if(auto txt = match.capturedTexts(); !txt.empty())
-        {
-          if(auto split = txt[0].split(","); split.size() > 1)
-          {
-            auto filename = f.first; filename.remove(addon_path + "/");
-            includes += "#include <" + filename + ">\n";
-            commands += split[1] + ",\n";
-          }
-        }
-      }
-    }
-  }
-  commands.remove(commands.length() - 2, 2);
-  commands.push_back("\n");
-  QDir{}.mkpath(output);
-  auto out_name = QFileInfo{addon_path}.fileName().replace("-", "_");
-  {
-    QFile cmd_f{output + "/" + out_name + "_commands_files.hpp"};
-    cmd_f.open(QIODevice::WriteOnly);
-    cmd_f.write(includes.toUtf8());
-    cmd_f.close();
-  }
-  {
-    QFile cmd_f{output + "/" + out_name + "_commands.hpp"};
-    cmd_f.open(QIODevice::WriteOnly);
-    cmd_f.write(commands.toUtf8());
-    cmd_f.close();
-  }
-}
-
-struct AddonData
-{
-  std::string unity_cpp;
-  std::vector<std::pair<QString, QString>> files;
-};
-
-static
-AddonData loadAddon(const QString& addon)
-{
-  AddonData data;
-  std::string cpp_files;
-  std::vector<std::pair<QString, QString>> files;
-  QDirIterator it{addon, {"*.cpp", "*.hpp"}, QDir::Filter::Files | QDir::Filter::NoDotAndDotDot, QDirIterator::Subdirectories};
-
-  while(it.hasNext())
-  {
-    if(QFile f(it.next()); f.open(QIODevice::ReadOnly))
-    {
-      QFileInfo fi{f};
-      if(fi.suffix() == "cpp")
-      {
-        data.unity_cpp.append("#include \""+ it.filePath().toStdString() + "\"\n");
-      }
-
-      data.files.push_back({fi.filePath(), f.readAll()});
-    }
-  }
-  return data;
-}
-
-static void generateExportFile(
-      const QString& addon_files_path
-      , const QString& addon_name
-      , const QByteArray& addon_export)
-{
-  QFile export_file = addon_files_path + "/" + addon_name + "_export.h";
-  export_file.open(QIODevice::WriteOnly);
-  QByteArray export_data{
-    "#ifndef " + addon_export + "_EXPORT_H\n"
-    "#define " + addon_export + "_EXPORT_H\n"
-        "#define " + addon_export + "_EXPORT __attribute__((visibility(\"default\")))\n"
-        "#define " + addon_export + "_DEPRECATED [[deprecated]]\n"
-    "#endif\n"
-  };
-  export_file.write(export_data);
-  export_file.close();
-}
-
-static QString generateAddonFiles(
-      QString addon_name
-      , const QString& addon
-      , const std::vector<std::pair<QString, QString>>& files)
-{
-  addon_name.replace("-", "_");
-  QByteArray addon_export = addon_name.toUpper().toUtf8();
-
-  QString addon_files_path = QDir::tempPath() + "/score-tmp-build/" + addon_name;
-  QDir{}.mkpath(addon_files_path);
-  generateExportFile(addon_files_path, addon_name, addon_export);
-  generateCommandFiles(addon_files_path, addon, files);
-  return addon_files_path;
-}
-void ApplicationPlugin::setupAddon(const QString& addon)
-{
-  qDebug() << "Registering JIT addon" << addon;
-  QFileInfo addonInfo{addon};
-  auto addonFolderName = addonInfo.fileName();
-  if(addonFolderName == "Nodes")
-    return;
-
-  auto [cpp_files, files] = loadAddon(addon);
-
-  if(cpp_files.empty())
-    return;
-
-  auto addon_files_path = generateAddonFiles(addonFolderName, addon, files);
-  std::vector<std::string> flags = {
-    "-I" + addon.toStdString()
-  , "-I" + addon_files_path.toStdString()};
-  m_compiler.submitJob(cpp_files, flags);
-}
-
-void ApplicationPlugin::setupNode(const QString& f)
-{
-  qDebug() << "Registering JIT node" << f;
-  QFileInfo fi{f};
-  if(fi.suffix() == "hpp" || fi.suffix() == "cpp")
-  {
-    if(QFile file{f}; file.open(QIODevice::ReadOnly))
-    {
-      auto node = file.readAll();
-      node.append(
-            R"_(
-            #include <score/plugins/PluginInstances.hpp>
-
-            SCORE_EXPORT_PLUGIN(Control::score_generic_plugin<Node>)
-            )_");
-      m_compiler.submitJob(node.toStdString(), {});
+      it.next();
+      setupAddon(it.fileInfo().filePath());
     }
   }
 }
+
 void ApplicationPlugin::registerAddon(jit_plugin* p)
 {
   auto plugin = p->plugin;
@@ -390,6 +161,64 @@ void ApplicationPlugin::registerAddon(jit_plugin* p)
   }
 
   qDebug() << "JIT addon registered" << p->plugin;
+}
+
+void ApplicationPlugin::setupAddon(const QString& addon)
+{
+  qDebug() << "Registering JIT addon" << addon;
+  QFileInfo addonInfo{addon};
+  auto addonFolderName = addonInfo.fileName();
+  if(addonFolderName == "Nodes")
+    return;
+
+  auto [json, cpp_files, files] = loadAddon(addon);
+
+  if(cpp_files.empty())
+    return;
+
+  auto addon_files_path = generateAddonFiles(addonFolderName, addon, files);
+  std::vector<std::string> flags = {
+    "-I" + addon.toStdString()
+  , "-I" + addon_files_path.toStdString()};
+
+  const std::string id = json["key"].toString().remove(QChar('-')).toStdString();
+  m_compiler.submitJob(id, cpp_files, flags);
+}
+
+void ApplicationPlugin::setupNode(const QString& f)
+{
+  QFileInfo fi{f};
+  if(fi.suffix() == "hpp" || fi.suffix() == "cpp")
+  {
+    if(QFile file{f}; file.open(QIODevice::ReadOnly))
+    {
+      auto node = file.readAll();
+      constexpr auto make_uuid_s = "make_uuid";
+      auto make_uuid = node.indexOf(make_uuid_s);
+      if(make_uuid == -1)
+        return;
+      int umin = node.indexOf('"', make_uuid + 9);
+      if(umin == -1)
+        return;
+      int umax = node.indexOf('"', umin + 1);
+      if(umax == -1)
+        return;
+      if((umax - umin) != 37)
+        return;
+      auto uuid = QString{node.mid(umin + 1, 36)};
+      uuid.remove(QChar('-'));
+
+      node.append(
+            R"_(
+            #include <score/plugins/PluginInstances.hpp>
+
+            SCORE_EXPORT_PLUGIN(Control::score_generic_plugin<Node>)
+            )_");
+
+      qDebug() << "Registering JIT node" << f;
+      m_compiler.submitJob(uuid.toStdString(), node.toStdString(), {});
+    }
+  }
 }
 
 void ApplicationPlugin::updateAddon(const QString& f)
