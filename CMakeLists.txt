@@ -100,30 +100,22 @@ set(CLANG_LIBS
     clangIndex
 )
 
+llvm_map_components_to_libnames(LLVM_LIBS
+  core
+  executionengine
+  native
+  object
+  orcjit
+  runtimedyld
+  support
+)
+
 if(WIN32)
-  llvm_map_components_to_libnames(LLVM_LIBS
-    core
-    executionengine
-    native
-    object
-    orcjit
-    runtimedyld
-    support
-  )
   target_link_libraries(score_addon_jit PRIVATE -Wl,--start-group ${LLVM_LIBS} ${CLANG_LIBS} -Wl,--end-group mincore)
 elseif(APPLE)
-  llvm_map_components_to_libnames(LLVM_LIBS
-    core
-    executionengine
-    native
-    object
-    orcjit
-    runtimedyld
-    support
-  )
   target_link_libraries(score_addon_jit PRIVATE ${CLANG_LIBS} Polly PollyISL PollyPPCG ${LLVM_LIBS})
 else()
-  target_link_libraries(score_addon_jit PRIVATE ${CLANG_LIBS} LLVM)
+  target_link_libraries(score_addon_jit PRIVATE ${CLANG_LIBS} ${LLVM_LIBS})
 endif()
 
 # Code generation
