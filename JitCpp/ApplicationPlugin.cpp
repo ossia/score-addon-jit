@@ -18,6 +18,7 @@
 #include <QDir>
 #include <QThread>
 #include <QDirIterator>
+#include <QQuickWidget>
 namespace Jit
 {
 ApplicationPlugin::ApplicationPlugin(const score::GUIApplicationContext& ctx)
@@ -62,6 +63,8 @@ void ApplicationPlugin::initialize()
       setupAddon(it.fileInfo().filePath());
     }
   }
+
+  delete new QQuickWidget;
 }
 
 void ApplicationPlugin::registerAddon(jit_plugin* p)

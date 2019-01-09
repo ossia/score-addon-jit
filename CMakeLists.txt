@@ -48,8 +48,9 @@ set(SRCS
 
 add_library(${PROJECT_NAME} ${SRCS} ${HDRS})
 
-set(LLVM_BUILD_MAIN_SRC_DIR /opt/llvm)
 find_package(LLVM REQUIRED PATHS ${LLVM_DIR})
+find_package(Clang REQUIRED PATHS ${LLVM_DIR}/../Clang)
+find_package(Polly PATHS ${LLVM_DIR}/../Polly)
 if(LLVM_VERSION MATCHES "7.*" OR LLVM_VERSION MATCHES "8.*")
   message("-- LLVM version: ${LLVM_VERSION}")
 else()
@@ -100,6 +101,10 @@ set(CLANG_LIBS
     clangIndex
 )
 
+if(Polly_FOUND)
+  set(POLLY_LIBS Polly PollyISL PollyPPCG)
+endif()
+
 llvm_map_components_to_libnames(LLVM_LIBS
   core
   executionengine
@@ -113,9 +118,9 @@ llvm_map_components_to_libnames(LLVM_LIBS
 if(WIN32)
   target_link_libraries(score_addon_jit PRIVATE -Wl,--start-group ${LLVM_LIBS} ${CLANG_LIBS} -Wl,--end-group mincore)
 elseif(APPLE)
-  target_link_libraries(score_addon_jit PRIVATE ${CLANG_LIBS} Polly PollyISL PollyPPCG ${LLVM_LIBS})
+  target_link_libraries(score_addon_jit PRIVATE ${CLANG_LIBS} ${POLLY_LIBS} ${LLVM_LIBS})
 else()
-  target_link_libraries(score_addon_jit PRIVATE ${CLANG_LIBS} ${LLVM_LIBS})
+  target_link_libraries(score_addon_jit PRIVATE -Wl,--start-group ${CLANG_LIBS} ${POLLY_LIBS} ${LLVM_LIBS} -Wl,--end-group)
 endif()
 
 # Code generation

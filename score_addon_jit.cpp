@@ -6,7 +6,6 @@
 #include <JitCpp/ApplicationPlugin.hpp>
 
 #include <PluginSettings/PluginSettings.hpp>
-#include <QQuickWidget>
 
 score_addon_jit::score_addon_jit()
 {
@@ -22,7 +21,6 @@ score_addon_jit::score_addon_jit()
 
 score_addon_jit::~score_addon_jit()
 {
-  delete new QQuickWidget;
 }
 
 std::vector<std::unique_ptr<score::InterfaceBase>> score_addon_jit::factories(
