@@ -228,9 +228,23 @@ jitted_node_ctx::jitted_node_ctx()
 jitted_node jitted_node_ctx::compile(std::string sourceCode, const std::vector<std::string>& additional_flags)
 {
   auto t0 = std::chrono::high_resolution_clock::now();
-  auto module = jit.compileModule(sourceCode, additional_flags, context);
+
+  auto sourceFileName = saveSourceFile(sourceCode);
+  if (!sourceFileName)
+    return {};
+
+  std::string cpp = *sourceFileName;
+  auto filename = QFileInfo(QString::fromStdString(cpp)).fileName();
+  auto global_init = "_GLOBAL__sub_I_" + filename.replace('-', '_');
+
+  auto module = jit.compileModule(cpp, additional_flags, context);
   if (!module)
     throw Exception{module.takeError()};
+  {
+    auto globals_init = jit.getFunction<void()>(global_init.toStdString());
+    SCORE_ASSERT(globals_init);
+    (*globals_init)();
+  }
 
   // Compile to machine code and link.
   jit.submitModule(std::move(*module));

@@ -25,7 +25,7 @@ ApplicationPlugin::ApplicationPlugin(const score::GUIApplicationContext& ctx)
   : score::GUIApplicationPlugin{ctx}
 {
   con(m_addonsWatch, &QFileSystemWatcher::directoryChanged,
-      this, &ApplicationPlugin::setupAddon);
+      this, [&] (const QString& a) { QTimer::singleShot(2000, [&] { setupAddon(a); }); });
   con(m_addonsWatch, &QFileSystemWatcher::fileChanged,
       this, &ApplicationPlugin::updateAddon);
 
@@ -151,7 +151,14 @@ void ApplicationPlugin::registerAddon(jit_plugin* p)
   for(auto plug : gap)
     plug->initialize();
 
-  // TODO setup settings
+  QSettings s;
+  auto& settings = presenter->settings();
+  for (auto& elt : settings_ifaces)
+  {
+    auto set = dynamic_cast<score::SettingsDelegateFactory*>(elt);
+    SCORE_ASSERT(set);
+    settings.setupSettingsPlugin(s, context, *set);
+  }
 
   if (presenter->view())
   {

@@ -43,15 +43,10 @@ static QString hashFile(const QString& path)
 
 llvm::Expected<std::unique_ptr<llvm::Module>>
 ClangCC1Driver::compileTranslationUnit(
-    const std::string& cppCode
+    const std::string& cpp
     , const std::vector<std::string>& flags
     , llvm::LLVMContext& context)
 {
-  auto sourceFileName = saveSourceFile(cppCode);
-  if (!sourceFileName)
-    return sourceFileName.takeError();
-
-  std::string cpp = *sourceFileName;
   std::string preproc = replaceExtension(cpp, "preproc.cpp");
   std::string bc;
 

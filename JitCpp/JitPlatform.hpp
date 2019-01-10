@@ -153,6 +153,8 @@ static inline void populateDefinitions(std::vector<std::string>& args)
   args.push_back("-DSCORE_PLUGIN_MAPPING");
   args.push_back("-DSCORE_PLUGIN_MEDIA");
   args.push_back("-DSCORE_PLUGIN_SCENARIO");
+  args.push_back("-DSCORE_PLUGIN_MIDI");
+  args.push_back("-DSCORE_PLUGIN_RECORDING");
   //args.push_back("-DSCORE_STATIC_PLUGINS");
   args.push_back("-DTINYSPLINE_DOUBLE_PRECISION");
   args.push_back("-D_GNU_SOURCE");
@@ -236,7 +238,25 @@ static inline auto getPotentialTriples()
 static inline void populateIncludeDirs(std::vector<std::string>& args)
 {
   auto sdk = locateSDK();
+
+  bool sdk_found = true;
+
+  QDir dir(QString::fromStdString(sdk));
+  if(!dir.cd("include") || !dir.cd("c++"))
+  {
+    qDebug() << "Unable to locate standard headers, fallback to /usr";
+    sdk = "/usr";
+    dir = "/usr";
+    if(!dir.cd("include") || !dir.cd("c++"))
+    {
+      qDebug() << "Unable to locate standard headers++";
+      throw std::runtime_error("Unable to compile");
+    }
+    sdk_found = false;
+  }
+
   qDebug() << "SDK located: " << QString::fromStdString(sdk);
+
   args.push_back("-resource-dir");
   args.push_back(sdk + "/lib/clang/" SCORE_LLVM_VERSION);
 
@@ -252,11 +272,6 @@ static inline void populateIncludeDirs(std::vector<std::string>& args)
   // TODO these are only heuristics. how to make them better ?
   {
     const auto libstdcpp_major = QString::number(_GLIBCXX_RELEASE);
-    QDir dir(QString::fromStdString(sdk));
-    if(!dir.cd("include"))
-      throw std::runtime_error("Unable to locate libstdc++");
-    if(!dir.cd("c++"))
-      throw std::runtime_error("Unable to locate libstdc++");
 
     QDirIterator cpp_it{dir};
     while(cpp_it.hasNext())
@@ -308,73 +323,93 @@ static inline void populateIncludeDirs(std::vector<std::string>& args)
   include("qt/QtSerialPort");
 
 #if defined(SCORE_DEPLOYMENT_BUILD)
-  include("score");
+  bool deploying = true;
 #else
-
-  auto src_include_dirs = {
-    "/API/OSSIA",
-    "/API/3rdparty/variant/include",
-    "/API/3rdparty/nano-signal-slot/include",
-    "/API/3rdparty/spdlog/include",
-    "/API/3rdparty/brigand/include",
-    "/API/3rdparty/fmt/include",
-    "/API/3rdparty/hopscotch-map/include",
-    "/API/3rdparty/chobo-shl/include",
-    "/API/3rdparty/frozen/include",
-    "/API/3rdparty/bitset2",
-    "/API/3rdparty/GSL/include",
-    "/API/3rdparty/flat_hash_map",
-    "/API/3rdparty/flat/include",
-    "/API/3rdparty/readerwriterqueue",
-    "/API/3rdparty/concurrentqueue",
-    "/API/3rdparty/SmallFunction/smallfun/include",
-    "/API/3rdparty/asio/asio/include",
-    "/API/3rdparty/websocketpp",
-    "/API/3rdparty/rapidjson/include",
-    "/API/3rdparty/RtMidi17",
-    "/API/3rdparty/oscpack",
-    "/API/3rdparty/multi_index/include",
-    "/API/3rdparty/verdigris/src",
-    "/API/3rdparty/weakjack",
-    "/base/lib",
-    "/base/plugins/score-lib-state",
-    "/base/plugins/score-lib-device",
-    "/base/plugins/score-lib-process",
-    "/base/plugins/score-lib-inspector",
-    "/base/plugins/score-plugin-curve",
-    "/base/plugins/score-plugin-engine",
-    "/base/plugins/score-plugin-scenario",
-    "/base/plugins/score-plugin-library",
-    "/base/plugins/score-plugin-deviceexplorer",
-    "/base/plugins/score-plugin-media"
-  };
-
-  for(auto path : src_include_dirs)
-  {
-    args.push_back("-I" + std::string(SCORE_ROOT_SOURCE_DIR) + path);
-  }
-
-  auto src_build_dirs = {
-    "/.",
-    "/base/lib",
-    "/base/plugins/score-lib-state",
-    "/base/plugins/score-lib-device",
-    "/base/plugins/score-lib-process",
-    "/base/plugins/score-lib-inspector",
-    "/base/plugins/score-plugin-curve",
-    "/base/plugins/score-plugin-engine",
-    "/base/plugins/score-plugin-scenario",
-    "/base/plugins/score-plugin-library",
-    "/base/plugins/score-plugin-deviceexplorer",
-    "/base/plugins/score-plugin-media",
-    "/API/OSSIA"
-  };
-
-  for(auto path : src_build_dirs)
-  {
-    args.push_back("-I" + std::string(SCORE_ROOT_BINARY_DIR) + path);
-  }
+  bool deploying = false;
 #endif
+
+  if(deploying && sdk_found)
+  {
+    include("score");
+  }
+  else
+  {
+    auto src_include_dirs = {
+      "/API/OSSIA",
+      "/API/3rdparty/variant/include",
+      "/API/3rdparty/nano-signal-slot/include",
+      "/API/3rdparty/spdlog/include",
+      "/API/3rdparty/brigand/include",
+      "/API/3rdparty/fmt/include",
+      "/API/3rdparty/hopscotch-map/include",
+      "/API/3rdparty/chobo-shl/include",
+      "/API/3rdparty/frozen/include",
+      "/API/3rdparty/bitset2",
+      "/API/3rdparty/GSL/include",
+      "/API/3rdparty/flat_hash_map",
+      "/API/3rdparty/flat/include",
+      "/API/3rdparty/readerwriterqueue",
+      "/API/3rdparty/concurrentqueue",
+      "/API/3rdparty/SmallFunction/smallfun/include",
+      "/API/3rdparty/asio/asio/include",
+      "/API/3rdparty/websocketpp",
+      "/API/3rdparty/rapidjson/include",
+      "/API/3rdparty/RtMidi17",
+      "/API/3rdparty/oscpack",
+      "/API/3rdparty/multi_index/include",
+      "/API/3rdparty/verdigris/src",
+      "/API/3rdparty/weakjack",
+      "/base/lib",
+      "/base/plugins/score-lib-state",
+      "/base/plugins/score-lib-device",
+      "/base/plugins/score-lib-process",
+      "/base/plugins/score-lib-inspector",
+      "/base/plugins/score-plugin-curve",
+      "/base/plugins/score-plugin-engine",
+      "/base/plugins/score-plugin-scenario",
+      "/base/plugins/score-plugin-library",
+      "/base/plugins/score-plugin-deviceexplorer",
+      "/base/plugins/score-plugin-media",
+      "/base/plugins/score-plugin-loop",
+      "/base/plugins/score-plugin-midi",
+      "/base/plugins/score-plugin-recording",
+      "/base/plugins/score-plugin-automation",
+      "/base/plugins/score-plugin-js",
+      "/base/plugins/score-plugin-mapping"
+    };
+
+    for(auto path : src_include_dirs)
+    {
+      args.push_back("-I" + std::string(SCORE_ROOT_SOURCE_DIR) + path);
+    }
+
+    auto src_build_dirs = {
+      "/.",
+      "/base/lib",
+      "/base/plugins/score-lib-state",
+      "/base/plugins/score-lib-device",
+      "/base/plugins/score-lib-process",
+      "/base/plugins/score-lib-inspector",
+      "/base/plugins/score-plugin-curve",
+      "/base/plugins/score-plugin-engine",
+      "/base/plugins/score-plugin-scenario",
+      "/base/plugins/score-plugin-library",
+      "/base/plugins/score-plugin-deviceexplorer",
+      "/base/plugins/score-plugin-media",
+      "/base/plugins/score-plugin-loop",
+      "/base/plugins/score-plugin-midi",
+      "/base/plugins/score-plugin-recording",
+      "/base/plugins/score-plugin-automation",
+      "/base/plugins/score-plugin-js",
+      "/base/plugins/score-plugin-mapping",
+      "/API/OSSIA"
+    };
+
+    for(auto path : src_build_dirs)
+    {
+      args.push_back("-I" + std::string(SCORE_ROOT_BINARY_DIR) + path);
+    }
+  }
 }
 
 }

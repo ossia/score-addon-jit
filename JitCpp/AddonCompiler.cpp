@@ -20,8 +20,21 @@ struct jit_plugin_context
     auto t0 = std::chrono::high_resolution_clock::now();
 
     flags.push_back("-DSCORE_JIT_ID=" + id);
-    auto module = jit.compile(sourceCode, flags, context);
-    //SCORE_ASSERT(module);
+
+    auto sourceFileName = saveSourceFile(sourceCode);
+    if (!sourceFileName)
+      return {};
+
+    std::string cpp = *sourceFileName;
+    auto filename = QFileInfo(QString::fromStdString(cpp)).fileName();
+    auto global_init = "_GLOBAL__sub_I_" + filename.replace('-', '_');
+
+    auto module = jit.compile(cpp, flags, context);
+    {
+      auto globals_init = jit.getFunction<void()>(global_init.toStdString());
+      SCORE_ASSERT(globals_init);
+      (*globals_init)();
+    }
 
     auto jitedFn = jit.getFunction<score::Plugin_QtInterface* ()>("plugin_instance_" + id);
     if (!jitedFn)

@@ -57,20 +57,20 @@ readModuleFromBitcodeFile(llvm::StringRef bc, llvm::LLVMContext& context)
 }
 
 
-static std::string
+static inline std::string
 replaceExtension(llvm::StringRef name, llvm::StringRef ext)
 {
   return name.substr(0, name.find_last_of('.') + 1).str() + ext.str();
 }
 
 
-static llvm::Error return_code_error(llvm::StringRef message, int returnCode)
+static inline llvm::Error return_code_error(llvm::StringRef message, int returnCode)
 {
   return llvm::make_error<llvm::StringError>(
       message, std::error_code(returnCode, std::system_category()));
 }
 
-static llvm::Expected<std::string> saveSourceFile(const std::string& content)
+static inline llvm::Expected<std::string> saveSourceFile(const std::string& content)
 {
   using llvm::sys::fs::createTemporaryFile;
 
