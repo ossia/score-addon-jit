@@ -25,7 +25,12 @@ ApplicationPlugin::ApplicationPlugin(const score::GUIApplicationContext& ctx)
   : score::GUIApplicationPlugin{ctx}
 {
   con(m_addonsWatch, &QFileSystemWatcher::directoryChanged,
-      this, [&] (const QString& a) { QTimer::singleShot(2000, [&] { setupAddon(a); }); });
+      this, [&] (const QString& a) {
+    QTimer::singleShot(5000, [=]
+    {
+      rescanAddons();
+    });
+  });
   con(m_addonsWatch, &QFileSystemWatcher::fileChanged,
       this, &ApplicationPlugin::updateAddon);
 
@@ -36,34 +41,47 @@ ApplicationPlugin::ApplicationPlugin(const score::GUIApplicationContext& ctx)
       this, &ApplicationPlugin::registerAddon, Qt::QueuedConnection);
 }
 
-void ApplicationPlugin::initialize()
+void ApplicationPlugin::rescanAddons()
 {
   const auto& libpath = context.settings<Library::Settings::Model>().getPath();
-
+  auto addons = libpath + "/Addons";
+  m_addonsWatch.addPath(addons);
+  QDirIterator it{addons, QDir::Filter::Dirs | QDir::Filter::NoDotAndDotDot, QDirIterator::NoIteratorFlags};
+  while(it.hasNext())
   {
-    auto nodes = libpath + "/Nodes";
-    m_nodesWatch.addPath(nodes);
-
-    QDirIterator it{nodes, QDir::Filter::Files | QDir::Filter::NoDotAndDotDot, QDirIterator::Subdirectories};
-    while(it.hasNext())
+    it.next();
+    auto p = it.fileInfo().filePath();
+    if(!m_addonsPaths.contains(p))
     {
-      auto path = it.next();
-      m_nodesWatch.addPath(path);
-      setupNode(path);
+      m_addonsPaths.insert(p);
+      setupAddon(p);
     }
   }
+}
+void ApplicationPlugin::rescanNodes()
+{
+  const auto& libpath = context.settings<Library::Settings::Model>().getPath();
+  auto nodes = libpath + "/Nodes";
+  m_nodesWatch.addPath(nodes);
 
+  QDirIterator it{nodes, QDir::Filter::Files | QDir::Filter::NoDotAndDotDot, QDirIterator::Subdirectories};
+  while(it.hasNext())
   {
-    auto addons = libpath + "/Addons";
-    m_addonsWatch.addPath(addons);
-    QDirIterator it{addons, QDir::Filter::Dirs | QDir::Filter::NoDotAndDotDot, QDirIterator::NoIteratorFlags};
-    while(it.hasNext())
+    auto path = it.next();
+    m_nodesWatch.addPath(path);
+    if(!m_nodesPaths.contains(path))
     {
-      it.next();
-      setupAddon(it.fileInfo().filePath());
+      m_nodesPaths.insert(path);
+      setupAddon(path);
     }
+    setupNode(path);
   }
 
+}
+void ApplicationPlugin::initialize()
+{
+  rescanNodes();
+  rescanAddons();
   delete new QQuickWidget;
 }
 
@@ -233,6 +251,7 @@ void ApplicationPlugin::setupNode(const QString& f)
 
 void ApplicationPlugin::updateAddon(const QString& f)
 {
+  qDebug() << f;
 }
 
 
