@@ -302,7 +302,9 @@ static inline void populateIncludeDirs(std::vector<std::string>& args)
   }
 #endif
 
+#if defined(__linux__)
   include("x86_64-linux-gnu"); // #debian
+#endif
   include(""); // /usr/include
   include("qt");
   include("qt/QtCore");
