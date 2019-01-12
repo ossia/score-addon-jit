@@ -251,7 +251,11 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr, Dia
 
   // When running with -disable-free, don't do any destruction or shutdown.
   if (Clang->getFrontendOpts().DisableFree) {
+#if (LLVM_VERSION_MAJOR < 8)
     BuryPointer(std::move(Clang));
+#else
+    llvm::BuryPointer(std::move(Clang));
+#endif
     return !Success;
   }
 

@@ -203,7 +203,11 @@ private:
           consumeError(SymbolName.takeError());
           continue;
         }
+#if (LLVM_VERSION_MAJOR < 8)
         auto Flags = JITSymbolFlags::fromObjectSymbol(Symbol);
+#else
+        auto Flags = *JITSymbolFlags::fromObjectSymbol(Symbol);
+#endif
         SymbolTable.insert(
           std::make_pair(*SymbolName, JITEvaluatedSymbol(0, Flags)));
       }
@@ -382,12 +386,14 @@ class JitCompiler
         const llvm::object::ObjectFile& obj,
         const llvm::LoadedObjectInfo& info)
     {
+#if (LLVM_VERSION_MAJOR < 8)
       // Workaround 5.0 API inconsistency:
       // http://lists.llvm.org/pipermail/llvm-dev/2017-August/116806.html
       const auto& fixedInfo
           = static_cast<const llvm::RuntimeDyld::LoadedObjectInfo&>(info);
 
       Jit.GdbEventListener->NotifyObjectEmitted(obj, fixedInfo);
+#endif
     }
 
   private:
@@ -399,8 +405,11 @@ class JitCompiler
 
   using ObjectLayer_t = llvm::orc::ScoreLinkingLayer;
   using CompileLayer_t
+#if (LLVM_VERSION_MAJOR < 8)
       = llvm::orc::IRCompileLayer<ObjectLayer_t, IRCompiler_t>;
-
+#else
+      = llvm::orc::LegacyIRCompileLayer<ObjectLayer_t, IRCompiler_t>;
+#endif
   llvm::orc::ExecutionSession es;
 public:
   std::shared_ptr<llvm::RuntimeDyld::MemoryManager> m_memoryManager = std::make_shared<llvm::SectionMemoryManager>();
