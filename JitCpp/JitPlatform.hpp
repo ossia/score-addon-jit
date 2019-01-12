@@ -7,6 +7,8 @@
 #include <QDir>
 #include <QDirIterator>
 #include <QDebug>
+#include <Library/LibrarySettings.hpp>
+#include <score/application/ApplicationContext.hpp>
 #include <llvm/Support/Host.h>
 #if __has_include(<llvm/Config/llvm-config-64.h>)
 #include <llvm/Config/llvm-config-64.h>
@@ -50,7 +52,16 @@ static inline std::string locateSDK()
 #endif
 
 #else
-  return "/usr";
+  if(QFileInfo("/usr/include/c++").isDir())
+  {
+    return "/usr";
+  }
+  else
+  {
+    auto libpath = score::AppContext().settings<Library::Settings::Model>().getPath();
+    libpath += "/sdk";
+    return libpath.toStdString();
+  }
 #endif
 }
 
@@ -238,6 +249,8 @@ static inline auto getPotentialTriples()
 static inline void populateIncludeDirs(std::vector<std::string>& args)
 {
   auto sdk = locateSDK();
+  std::cerr << "\nLooking for sdk in: " << sdk << "\n";
+  qDebug() << "Looking for sdk in: " << QString::fromStdString(sdk);
 
   bool sdk_found = true;
 
