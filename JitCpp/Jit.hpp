@@ -405,7 +405,7 @@ class JitCompiler
 
   using ObjectLayer_t = llvm::orc::ScoreLinkingLayer;
   using CompileLayer_t
-#if (LLVM_VERSION_MAJOR < 8)
+#if (LLVM_VERSION_MAJOR < 8) || defined(_WIN32)
       = llvm::orc::IRCompileLayer<ObjectLayer_t, IRCompiler_t>;
 #else
       = llvm::orc::LegacyIRCompileLayer<ObjectLayer_t, IRCompiler_t>;
