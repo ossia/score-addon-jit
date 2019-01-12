@@ -199,6 +199,7 @@ private:
           continue;
         Expected<StringRef> SymbolName = Symbol.getName();
         // FIXME: Raise an error for bad symbols.
+        std::cerr << "symbol: " << SymbolName.get().str() << std::endl;
         if (!SymbolName) {
           consumeError(SymbolName.takeError());
           continue;
