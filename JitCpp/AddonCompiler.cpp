@@ -29,6 +29,7 @@ struct jit_plugin_context
     auto filename = QFileInfo(QString::fromStdString(cpp)).fileName();
     auto global_init = "_GLOBAL__sub_I_" + filename.replace('-', '_');
 
+    qDebug() << "Looking for: " << global_init;
     auto module = jit.compile(cpp, flags, context);
     {
       auto globals_init = jit.getFunction<void()>(global_init.toStdString());
