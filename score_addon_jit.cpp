@@ -5,12 +5,13 @@
 #include <JitCpp/JitModel.hpp>
 #include <JitCpp/ApplicationPlugin.hpp>
 
+#include <Process/Execution/ProcessComponent.hpp>
+
 #include <PluginSettings/PluginSettings.hpp>
 
 score_addon_jit::score_addon_jit()
 {
   using namespace llvm;
-
   sys::PrintStackTraceOnErrorSignal({});
 
   atexit(llvm_shutdown);

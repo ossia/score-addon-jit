@@ -17,7 +17,7 @@ struct ApplicationPlugin final
   ApplicationPlugin(const score::GUIApplicationContext& ctx);
 
   void setupAddon(const QString& addon);
-  void registerAddon(jit_plugin*);
+  void registerAddon(score::Plugin_QtInterface*);
   void updateAddon(const QString& addon);
 
   void setupNode(const QString& addon);

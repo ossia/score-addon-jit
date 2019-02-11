@@ -6,20 +6,21 @@ W_OBJECT_IMPL(Jit::AddonCompiler)
 
 namespace Jit
 {
-
-struct jit_plugin_context
+template<typename Fun_T>
+struct CustomCompilerImpl
 {
-  jit_plugin_context()
+  CustomCompilerImpl(const std::string& fname)
     : X{0, nullptr}
     , jit{*llvm::EngineBuilder().selectTarget()}
+    , factory_name{fname}
   {
   }
 
-  jit_plugin compile(const std::string& id, const std::string& sourceCode, std::vector<std::string> flags)
+  std::function<Fun_T> operator()(
+        const std::string& sourceCode
+        , const std::vector<std::string>& flags)
   {
     auto t0 = std::chrono::high_resolution_clock::now();
-
-    flags.push_back("-DSCORE_JIT_ID=" + id);
 
     auto sourceFileName = saveSourceFile(sourceCode);
     if (!sourceFileName)
@@ -33,29 +34,66 @@ struct jit_plugin_context
     auto module = jit.compile(cpp, flags, context);
     {
       auto globals_init = jit.getFunction<void()>(global_init.toStdString());
-      SCORE_ASSERT(globals_init);
-      (*globals_init)();
+      if(globals_init)
+        (*globals_init)();
     }
 
-    auto jitedFn = jit.getFunction<score::Plugin_QtInterface* ()>("plugin_instance_" + id);
+    auto jitedFn = jit.getFunction<Fun_T>(factory_name);
     if (!jitedFn)
       throw Exception{jitedFn.takeError()};
-
-    auto instance = (*jitedFn)();
-    if (!jitedFn)
-      throw std::runtime_error("No instance of plug-in");
 
     llvm::outs().flush();
     auto t1 = std::chrono::high_resolution_clock::now();
     std::cerr << "\n\nADDON BUILD DURATION: " << std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count() << " ms \n\n";
 
-    return {instance};
+    return *jitedFn;
   }
 
   llvm::PrettyStackTraceProgram X;
   llvm::LLVMContext context;
   JitCompiler jit;
+  std::string factory_name;
 };
+
+template<typename Fun_T>
+struct CompilerWrapper
+{
+  using impl_t = CustomCompilerImpl<Fun_T>;
+  impl_t* m_impl{};
+
+  CompilerWrapper() = default;
+  ~CompilerWrapper() { delete m_impl; }
+
+  CompilerWrapper(const std::string& s)
+    : m_impl{new impl_t{s}}
+  {
+
+  }
+
+  CompilerWrapper(const CompilerWrapper& other)
+  {
+    if(other.m_impl)
+      m_impl = new impl_t{other.m_impl->factory_name};
+  }
+
+  CompilerWrapper& operator=(const CompilerWrapper& other)
+  {
+    delete m_impl;
+    if(other.m_impl)
+      m_impl = {new impl_t{other.m_impl->factory_name}};
+    else
+      m_impl = nullptr;
+    return *this;
+  }
+
+  std::function<Fun_T> operator()(const std::string& code, const std::vector<std::string>& args)
+  {
+    if(m_impl)
+      return (*m_impl)(code, args);
+    return {};
+  }
+};
+
 
 AddonCompiler::AddonCompiler()
 {
@@ -70,28 +108,36 @@ AddonCompiler::~AddonCompiler()
   m_thread.wait();
 }
 
-void AddonCompiler::on_job(const std::string& id, const std::string& cpp, const std::vector<std::string>& flags)
+void AddonCompiler::on_job(std::string id, std::string cpp, std::vector<std::string> flags)
 {
   try
   {
     // TODO this is needed because if the jit_plugin instance is removed,
     // function calls to this plug-in will crash. We must detect when a plugin is
     // not necessary anymore and remove it.
+    using compiler_t = CustomCompilerImpl<score::Plugin_QtInterface* ()>;
 
-    static std::list<std::unique_ptr<jit_plugin_context>> ctx;
-    static std::list<jit_plugin> plugs;
+    static std::list<std::unique_ptr<compiler_t>> ctx;
 
-    ctx.push_back(std::make_unique<jit_plugin_context>());
-    auto plug = ctx.back()->compile(id, cpp, flags);
-    if(plug.plugin)
-    {
-      plugs.push_front(std::move(plug));
-      jobCompleted(&plugs.front());
-    }
+    flags.push_back("-DSCORE_JIT_ID=" + id);
+    ctx.push_back(std::make_unique<compiler_t>("plugin_instance_" + id));
+    auto jitedFn = (*ctx.back())(cpp, flags);
+
+    auto instance = jitedFn();
+    if (!instance)
+      throw std::runtime_error("No instance of plug-in");
+
+    jobCompleted(instance);
   }
   catch(const std::runtime_error& e) {
     qDebug() << "could not compile plug-in: " << e.what();
   }
+}
+
+
+CustomCompiler makeCustomCompiler(const std::string& function)
+{
+  return CompilerWrapper<void()>{function};
 }
 
 }

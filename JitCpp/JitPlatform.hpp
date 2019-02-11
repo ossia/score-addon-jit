@@ -89,11 +89,11 @@ static inline void populateCompileOptions(std::vector<std::string>& args)
   args.push_back("-dwarf-column-info");
   args.push_back("-debugger-tuning=gdb");
 
-  args.push_back("-fcxx-exceptions");
   args.push_back("-fno-use-cxa-atexit");
 
   args.push_back("-Ofast");
   // -Ofast stuff:
+
   args.push_back("-menable-no-infs");
   args.push_back("-menable-no-nans");
   args.push_back("-menable-unsafe-fp-math");
@@ -109,6 +109,11 @@ static inline void populateCompileOptions(std::vector<std::string>& args)
   args.push_back("-pic-level"); args.push_back("2");
   args.push_back("-pic-is-pie");
 
+  args.push_back("-fvisibility");
+  args.push_back("hidden");
+
+  args.push_back("-fvisibility-inlines-hidden");
+
   // if fsanitize:
   args.push_back("-mrelax-all");
   args.push_back("-disable-llvm-verifier");
@@ -122,6 +127,7 @@ static inline void populateCompileOptions(std::vector<std::string>& args)
 #endif
   args.push_back("-fno-assume-sane-operator-new");
   args.push_back("-stack-protector"); args.push_back("0");
+  args.push_back("-fcxx-exceptions");
   args.push_back("-fexceptions");
   args.push_back("-faddrsig");
 

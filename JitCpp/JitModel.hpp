@@ -1,7 +1,6 @@
 #pragma once
-#include <Media/Effect/DefaultEffectItem.hpp>
+#include <Control/DefaultEffectItem.hpp>
 #include <Process/Process.hpp>
-#include <Media/Effect/EffectExecutor.hpp>
 #include <Process/GenericProcessFactory.hpp>
 #include <Process/Process.hpp>
 #include <Process/ProcessMetadata.hpp>
@@ -14,6 +13,7 @@
 
 #include <Effect/EffectFactory.hpp>
 #include <JitCpp/Jit.hpp>
+#include <Process/Execution/ProcessComponent.hpp>
 namespace Jit
 {
 class JitEffectModel;
@@ -42,21 +42,6 @@ namespace Jit
 
   struct jitted_node_ctx
   {
-    struct init
-    {
-      init()
-      {
-
-        using namespace llvm;
-
-        sys::PrintStackTraceOnErrorSignal({});
-
-        atexit(llvm_shutdown);
-        InitializeNativeTarget();
-        InitializeNativeTargetAsmPrinter();
-        InitializeNativeTargetAsmParser();
-      }
-    } _init;
     jitted_node_ctx();
 
     jitted_node compile(std::string sourceCode, const std::vector<std::string>& additional_flags = {});

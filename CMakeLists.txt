@@ -61,15 +61,15 @@ endif()
 separate_arguments(LLVM_DEFINITIONS)
 
 # Project-specific definitions
-target_include_directories(score_addon_jit PRIVATE
+target_include_directories(score_addon_jit PUBLIC
     ${LLVM_INCLUDE_DIRS}
 )
-target_compile_definitions(score_addon_jit PRIVATE
+target_compile_definitions(score_addon_jit PUBLIC
     ${LLVM_DEFINITIONS}
 )
 
 target_compile_definitions(score_addon_jit
-  PRIVATE
+  PUBLIC
     SCORE_LLVM_VERSION="${LLVM_PACKAGE_VERSION}"
     SCORE_ROOT_SOURCE_DIR="${SCORE_ROOT_SOURCE_DIR}"
     SCORE_ROOT_BINARY_DIR="${SCORE_ROOT_BINARY_DIR}"
@@ -106,28 +106,28 @@ if(Polly_FOUND)
 endif()
 
 llvm_map_components_to_libnames(LLVM_LIBS
-  core
-  executionengine
-  native
-  object
-  orcjit
-  runtimedyld
-  support
+  all
 )
-
+if(TARGET score_plugin_media)
+  get_target_property(LIBS score_plugin_media LINK_LIBRARIES)
+  list (FIND LIBS "/usr/local/lib/libfaust.so" _index)
+  if (${_index} GREATER -1)
+    set(LLVM_LIBS LLVM)
+  endif()
+endif()
 if(WIN32)
-  target_link_libraries(score_addon_jit PRIVATE -Wl,--start-group ${LLVM_LIBS} ${CLANG_LIBS} -Wl,--end-group mincore)
+  target_link_libraries(score_addon_jit PUBLIC -Wl,--start-group ${LLVM_LIBS} ${CLANG_LIBS} -Wl,--end-group mincore)
 elseif(APPLE)
-  target_link_libraries(score_addon_jit PRIVATE ${CLANG_LIBS} ${POLLY_LIBS} ${LLVM_LIBS})
+  target_link_libraries(score_addon_jit PUBLIC ${CLANG_LIBS} ${POLLY_LIBS} ${LLVM_LIBS})
 else()
-  target_link_libraries(score_addon_jit PRIVATE -Wl,--start-group ${CLANG_LIBS} ${POLLY_LIBS} ${LLVM_LIBS} -Wl,--end-group)
+  target_link_libraries(score_addon_jit PUBLIC -Wl,--start-group ${CLANG_LIBS} ${POLLY_LIBS} ${LLVM_LIBS} -Wl,--end-group)
 endif()
 
 # Code generation
 score_generate_command_list_file(${PROJECT_NAME} "${HDRS}")
 
 # Link
-target_link_libraries(${PROJECT_NAME} PUBLIC score_plugin_engine score_plugin_media score_plugin_library Qt5::QuickWidgets)
+target_link_libraries(${PROJECT_NAME} PUBLIC score_lib_process score_plugin_library Qt5::QuickWidgets)
 
 # Target-specific options
 setup_score_plugin(${PROJECT_NAME})
@@ -146,3 +146,6 @@ setup_score_plugin(${PROJECT_NAME})
 #         PATTERN "tests" EXCLUDE
 #         PATTERN "Tests" EXCLUDE
 # )
+add_executable(Benchmarker Benchmarks/Benchmarker.cpp)
+target_link_libraries(Benchmarker PUBLIC ${SCORE_PLUGINS_LIST})
+set_target_properties(Benchmarker PROPERTIES ENABLE_EXPORTS 1)
