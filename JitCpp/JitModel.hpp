@@ -12,7 +12,6 @@
 #include <QDialog>
 
 #include <Effect/EffectFactory.hpp>
-#include <JitCpp/Jit.hpp>
 #include <Process/Execution/ProcessComponent.hpp>
 namespace Jit
 {
@@ -23,7 +22,7 @@ PROCESS_METADATA(
     , Jit::JitEffectModel
     , "0a3b49d6-4ce7-4668-aec3-9505b6ee1a60"
     , "Jit"
-    , "Jit"
+    , "C++ Jit process"
     , Process::ProcessCategory::Script
     , "Script"
     , "JIT compilation process"
@@ -34,22 +33,11 @@ PROCESS_METADATA(
     , Process::ProcessFlags::ExternalEffect)
 namespace Jit
 {
-  struct jitted_node
-  {
-    std::unique_ptr<llvm::Module> module;
-    std::function<ossia::graph_node*()> factory;
-  };
+template<typename Fun_T>
+struct Driver;
 
-  struct jitted_node_ctx
-  {
-    jitted_node_ctx();
-
-    jitted_node compile(std::string sourceCode, const std::vector<std::string>& additional_flags = {});
-
-    llvm::PrettyStackTraceProgram X;
-    llvm::LLVMContext context;
-    JitCompiler jit;
-  };
+using NodeCompiler = Driver<ossia::graph_node*()>;
+using NodeFactory = std::function<ossia::graph_node*()>;
 
 class JitEffectModel : public Process::ProcessModel
 {
@@ -65,13 +53,10 @@ public:
       QObject* parent);
   ~JitEffectModel() override;
 
-  template <typename Impl>
-  JitEffectModel(Impl& vis, QObject* parent)
-      : Process::ProcessModel{vis, parent}
-  {
-    vis.writeTo(*this);
-    init();
-  }
+  JitEffectModel(DataStream::Deserializer& vis, QObject* parent);
+  JitEffectModel(JSONObject::Deserializer& vis, QObject* parent);
+  JitEffectModel(DataStream::Deserializer&& vis, QObject* parent);
+  JitEffectModel(JSONObject::Deserializer&& vis, QObject* parent);
 
   const QString& script() const
   {
@@ -95,14 +80,14 @@ public:
     return m_outlets;
   }
 
-  jitted_node_ctx ctx;
-  ossia::optional<jitted_node> node;
+  NodeFactory factory;
 
   void errorMessage(const QString& e) W_SIGNAL(errorMessage, e)
 private:
   void init();
   void reload();
   QString m_text;
+  std::unique_ptr<NodeCompiler> m_compiler;
 };
 }
 

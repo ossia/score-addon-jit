@@ -1,5 +1,6 @@
 #include "JitModel.hpp"
 #include <JitCpp/EditScript.hpp>
+#include <JitCpp/Compiler/Driver.hpp>
 
 #include <QDialog>
 #include <QDialogButtonBox>
@@ -40,6 +41,34 @@ JitEffectModel::JitEffectModel(
 
 JitEffectModel::~JitEffectModel()
 {
+}
+
+JitEffectModel::JitEffectModel(JSONObject::Deserializer& vis, QObject* parent)
+  : Process::ProcessModel{vis, parent}
+{
+  vis.writeTo(*this);
+  init();
+}
+
+JitEffectModel::JitEffectModel(DataStream::Deserializer& vis, QObject* parent)
+  : Process::ProcessModel{vis, parent}
+{
+  vis.writeTo(*this);
+  init();
+}
+
+JitEffectModel::JitEffectModel(JSONObject::Deserializer&& vis, QObject* parent)
+  : Process::ProcessModel{vis, parent}
+{
+  vis.writeTo(*this);
+  init();
+}
+
+JitEffectModel::JitEffectModel(DataStream::Deserializer&& vis, QObject* parent)
+  : Process::ProcessModel{vis, parent}
+{
+  vis.writeTo(*this);
+  init();
 }
 
 void JitEffectModel::setScript(const QString& txt)
@@ -119,14 +148,24 @@ struct outlet_vis
 
 void JitEffectModel::reload()
 {
+  // FIXME dispos of them once unused at execution
+  static std::list<std::shared_ptr<NodeCompiler>> old_compilers;
+  if(m_compiler)
+  {
+    old_compilers.push_front(std::move(m_compiler));
+    if(old_compilers.size() > 5)
+      old_compilers.pop_back();
+  }
+
+  m_compiler = std::make_unique<NodeCompiler>("score_graph_node_factory");
   auto fx_text = m_text.toLocal8Bit();
-  ossia::optional<jitted_node> jit_factory;
+  NodeFactory jit_factory;
   if (fx_text.isEmpty())
     return;
 
   try
   {
-    jit_factory = ctx.compile(fx_text.toStdString());
+    jit_factory = (*m_compiler)(fx_text.toStdString(), {});
 
     if (!jit_factory)
       return;
@@ -142,15 +181,15 @@ void JitEffectModel::reload()
     return;
   }
 
-  std::unique_ptr<ossia::graph_node> jit_object{jit_factory->factory()};
+  std::unique_ptr<ossia::graph_node> jit_object{jit_factory()};
   if (!jit_object)
   {
-    jit_factory.reset();
+    jit_factory = {};
     return;
   }
   // creating a new dsp
 
-  node = std::move(jit_factory);
+  factory = std::move(jit_factory);
   qDeleteAll(m_inlets);
   qDeleteAll(m_outlets);
   m_inlets.clear();
@@ -174,6 +213,9 @@ void JitEffectModel::reload()
   if (!m_outlets.empty()
       && m_outlets.front()->type == Process::PortType::Audio)
     m_outlets.front()->setPropagate(true);
+
+  inletsChanged();
+  outletsChanged();
 }
 
 JitEditDialog::JitEditDialog(
@@ -216,47 +258,6 @@ JitEditDialog::JitEditDialog(
 QString JitEditDialog::text() const
 {
   return m_textedit->document()->toPlainText();
-}
-
-jitted_node_ctx::jitted_node_ctx()
-  : X{0, nullptr}
-  , jit{*llvm::EngineBuilder().selectTarget()}
-{
-}
-
-
-jitted_node jitted_node_ctx::compile(std::string sourceCode, const std::vector<std::string>& additional_flags)
-{
-  auto t0 = std::chrono::high_resolution_clock::now();
-
-  auto sourceFileName = saveSourceFile(sourceCode);
-  if (!sourceFileName)
-    return {};
-
-  std::string cpp = *sourceFileName;
-  auto filename = QFileInfo(QString::fromStdString(cpp)).fileName();
-  auto global_init = "_GLOBAL__sub_I_" + filename.replace('-', '_');
-
-  auto module = jit.compileModule(cpp, additional_flags, context);
-  if (!module)
-    throw Exception{module.takeError()};
-  {
-    auto globals_init = jit.getFunction<void()>(global_init.toStdString());
-    SCORE_ASSERT(globals_init);
-    (*globals_init)();
-  }
-
-  // Compile to machine code and link.
-  jit.submitModule(std::move(*module));
-  auto jitedFn
-      = jit.getFunction<ossia::graph_node*()>("score_graph_node_factory");
-  if (!jitedFn)
-    throw Exception{jitedFn.takeError()};
-
-  auto t1 = std::chrono::high_resolution_clock::now();
-  std::cerr << "\n\nBUILD DURATION: " << std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count() << " ms \n\n";
-  llvm::outs().flush();
-  return {std::move(*module), *jitedFn};
 }
 
 }
@@ -356,9 +357,9 @@ Execution::JitEffectComponent::JitEffectComponent(
     const Id<score::Component>& id, QObject* parent)
     : ProcessComponent_T{proc, ctx, id, "JitComponent", parent}
 {
-  if (proc.node)
+  if (proc.factory)
   {
-    this->node.reset(proc.node->factory());
+    this->node.reset(proc.factory());
     if (this->node)
     {
       m_ossia_process = std::make_shared<ossia::node_process>(node);

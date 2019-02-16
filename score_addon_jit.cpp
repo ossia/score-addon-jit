@@ -9,6 +9,10 @@
 
 #include <PluginSettings/PluginSettings.hpp>
 
+#include <llvm/ADT/StringRef.h>
+#include <llvm/Support/ManagedStatic.h>
+#include <llvm/Support/TargetSelect.h>
+#include <llvm/Support/Signals.h>
 score_addon_jit::score_addon_jit()
 {
   using namespace llvm;

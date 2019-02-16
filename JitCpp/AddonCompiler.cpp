@@ -1,5 +1,5 @@
 #include <JitCpp/AddonCompiler.hpp>
-#include <JitCpp/Jit.hpp>
+#include <JitCpp/Compiler/Driver.hpp>
 #include <wobjectimpl.h>
 
 W_OBJECT_IMPL(Jit::AddonCompiler)
@@ -7,58 +7,9 @@ W_OBJECT_IMPL(Jit::AddonCompiler)
 namespace Jit
 {
 template<typename Fun_T>
-struct CustomCompilerImpl
-{
-  CustomCompilerImpl(const std::string& fname)
-    : X{0, nullptr}
-    , jit{*llvm::EngineBuilder().selectTarget()}
-    , factory_name{fname}
-  {
-  }
-
-  std::function<Fun_T> operator()(
-        const std::string& sourceCode
-        , const std::vector<std::string>& flags)
-  {
-    auto t0 = std::chrono::high_resolution_clock::now();
-
-    auto sourceFileName = saveSourceFile(sourceCode);
-    if (!sourceFileName)
-      return {};
-
-    std::string cpp = *sourceFileName;
-    auto filename = QFileInfo(QString::fromStdString(cpp)).fileName();
-    auto global_init = "_GLOBAL__sub_I_" + filename.replace('-', '_');
-
-    qDebug() << "Looking for: " << global_init;
-    auto module = jit.compile(cpp, flags, context);
-    {
-      auto globals_init = jit.getFunction<void()>(global_init.toStdString());
-      if(globals_init)
-        (*globals_init)();
-    }
-
-    auto jitedFn = jit.getFunction<Fun_T>(factory_name);
-    if (!jitedFn)
-      throw Exception{jitedFn.takeError()};
-
-    llvm::outs().flush();
-    auto t1 = std::chrono::high_resolution_clock::now();
-    std::cerr << "\n\nADDON BUILD DURATION: " << std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count() << " ms \n\n";
-
-    return *jitedFn;
-  }
-
-  llvm::PrettyStackTraceProgram X;
-  llvm::LLVMContext context;
-  JitCompiler jit;
-  std::string factory_name;
-};
-
-template<typename Fun_T>
 struct CompilerWrapper
 {
-  using impl_t = CustomCompilerImpl<Fun_T>;
+  using impl_t = Driver<Fun_T>;
   impl_t* m_impl{};
 
   CompilerWrapper() = default;
@@ -115,7 +66,7 @@ void AddonCompiler::on_job(std::string id, std::string cpp, std::vector<std::str
     // TODO this is needed because if the jit_plugin instance is removed,
     // function calls to this plug-in will crash. We must detect when a plugin is
     // not necessary anymore and remove it.
-    using compiler_t = CustomCompilerImpl<score::Plugin_QtInterface* ()>;
+    using compiler_t = Driver<score::Plugin_QtInterface* ()>;
 
     static std::list<std::unique_ptr<compiler_t>> ctx;
 

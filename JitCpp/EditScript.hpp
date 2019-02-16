@@ -11,7 +11,7 @@ namespace Jit
 {
 const CommandGroupKey& CommandFactoryName()
 {
-  static const CommandGroupKey key{"JS"};
+  static const CommandGroupKey key{"Jit"};
   return key;
 }
 

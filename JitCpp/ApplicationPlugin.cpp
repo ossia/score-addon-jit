@@ -1,5 +1,4 @@
 #include <JitCpp/ApplicationPlugin.hpp>
-#include <JitCpp/Jit.hpp>
 #include <JitCpp/MetadataGenerator.hpp>
 
 #include <Library/LibrarySettings.hpp>
