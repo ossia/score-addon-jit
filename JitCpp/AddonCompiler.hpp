@@ -1,27 +1,31 @@
 #pragma once
 #include <score/tools/Todo.hpp>
-#include <wobjectdefs.h>
+
 #include <QThread>
+
 #include <score_addon_jit_export.h>
+#include <wobjectdefs.h>
 
 namespace score
-{ class Plugin_QtInterface; }
+{
+class Plugin_QtInterface;
+}
 
 namespace Jit
 {
 //! Compiles jobs asynchronously
-class AddonCompiler final
-    : public QObject
+class AddonCompiler final : public QObject
 {
   W_OBJECT(AddonCompiler)
 public:
   AddonCompiler();
 
   ~AddonCompiler();
-  void submitJob(const std::string& id, std::string cpp, std::vector<std::string> flags)
-  W_SIGNAL(submitJob, id, cpp, flags);
-  void jobCompleted(score::Plugin_QtInterface* p)
-  W_SIGNAL(jobCompleted, p);
+  void submitJob(
+      const std::string& id,
+      std::string cpp,
+      std::vector<std::string> flags) W_SIGNAL(submitJob, id, cpp, flags);
+  void jobCompleted(score::Plugin_QtInterface* p) W_SIGNAL(jobCompleted, p);
   void on_job(std::string id, std::string cpp, std::vector<std::string> flags);
 
 private:
@@ -29,7 +33,8 @@ private:
 };
 
 using FactoryFunction = std::function<void()>;
-using CustomCompiler = std::function<FactoryFunction(const std::string&, const std::vector<std::string>&)>;
+using CustomCompiler = std::function<
+    FactoryFunction(const std::string&, const std::vector<std::string>&)>;
 
 SCORE_ADDON_JIT_EXPORT
 CustomCompiler makeCustomCompiler(const std::string& function);

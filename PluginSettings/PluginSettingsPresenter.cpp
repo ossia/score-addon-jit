@@ -27,7 +27,8 @@ namespace PluginSettings
 {
 
 PluginSettingsPresenter::PluginSettingsPresenter(
-    score::SettingsDelegateModel& model, score::GlobalSettingsView& view,
+    score::SettingsDelegateModel& model,
+    score::GlobalSettingsView& view,
     QObject* parent)
     : score::GlobalSettingsPresenter{model, view, parent}
 {
@@ -45,7 +46,9 @@ PluginSettingsPresenter::PluginSettingsPresenter(
   ps_view.remoteView()->setSelectionModel(&ps_model.remoteSelection);
 
   connect(
-      &ps_model.remoteSelection, &QItemSelectionModel::currentRowChanged, this,
+      &ps_model.remoteSelection,
+      &QItemSelectionModel::currentRowChanged,
+      this,
       [&](const QModelIndex& current, const QModelIndex& previous) {
         RemoteAddon& addon = ps_model.remotePlugins.addons().at(current.row());
 

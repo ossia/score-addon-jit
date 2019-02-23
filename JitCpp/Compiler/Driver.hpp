@@ -6,19 +6,19 @@
 namespace Jit
 {
 
-template<typename Fun_T>
+template <typename Fun_T>
 struct Driver
 {
   Driver(const std::string& fname)
-    : X{0, nullptr}
-    , jit{*llvm::EngineBuilder().selectTarget()}
-    , factory_name{fname}
+      : X{0, nullptr}
+      , jit{*llvm::EngineBuilder().selectTarget()}
+      , factory_name{fname}
   {
   }
 
   std::function<Fun_T> operator()(
-        const std::string& sourceCode
-        , const std::vector<std::string>& flags)
+      const std::string& sourceCode,
+      const std::vector<std::string>& flags)
   {
     auto t0 = std::chrono::high_resolution_clock::now();
 
@@ -34,7 +34,7 @@ struct Driver
     auto module = jit.compile(cpp, flags, context);
     {
       auto globals_init = jit.getFunction<void()>(global_init.toStdString());
-      if(globals_init)
+      if (globals_init)
         (*globals_init)();
     }
     auto t1 = std::chrono::high_resolution_clock::now();
@@ -44,7 +44,10 @@ struct Driver
       throw Exception{jitedFn.takeError()};
 
     llvm::outs().flush();
-    std::cerr << "\n\nADDON BUILD DURATION: " << std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count() << " ms \n\n";
+    std::cerr << "\n\nADDON BUILD DURATION: "
+              << std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0)
+                     .count()
+              << " ms \n\n";
 
     return *jitedFn;
   }

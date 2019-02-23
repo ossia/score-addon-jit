@@ -2,15 +2,16 @@
 #include <score/plugins/Addon.hpp>
 
 #include <ossia/detail/algorithms.hpp>
+#include <ossia/detail/flat_map.hpp>
+#include <ossia/detail/optional.hpp>
 
 #include <boost/iterator/filter_iterator.hpp>
 
 #include <QAbstractItemModel>
+#include <QFileSystemWatcher>
 #include <QImage>
 #include <QUrl>
-#include <QFileSystemWatcher>
-#include <ossia/detail/flat_map.hpp>
-#include <ossia/detail/optional.hpp>
+
 #include <wobjectdefs.h>
 
 namespace score
@@ -22,7 +23,8 @@ namespace PluginSettings
 
 struct RemoteAddon
 {
-  static ossia::optional<RemoteAddon> fromJson(const QJsonObject& obj) noexcept;
+  static ossia::optional<RemoteAddon>
+  fromJson(const QJsonObject& obj) noexcept;
 
   QUrl source;
   UuidKey<score::Addon> key; // Can be the same as plug-in's
@@ -30,7 +32,8 @@ struct RemoteAddon
   QString raw_name;
   QString name;
   QString version;
-  QString latestVersionAddress; // URL to a file containing the current version.
+  QString
+      latestVersionAddress; // URL to a file containing the current version.
 
   QString shortDescription;
   QString longDescription;
@@ -45,6 +48,7 @@ struct RemoteAddon
 class LocalPluginItemModel : public QAbstractItemModel
 {
   std::vector<RemoteAddon> m_vec;
+
 public:
   LocalPluginItemModel(const score::ApplicationContext& ctx);
 
@@ -72,14 +76,8 @@ class RemotePluginItemModel : public QAbstractItemModel
   std::vector<RemoteAddon> m_vec;
 
 public:
-  auto& addons()
-  {
-    return m_vec;
-  }
-  auto& addons() const
-  {
-    return m_vec;
-  }
+  auto& addons() { return m_vec; }
+  auto& addons() const { return m_vec; }
 
   void addAddon(RemoteAddon e);
 

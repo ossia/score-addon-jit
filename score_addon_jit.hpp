@@ -3,8 +3,8 @@
 #include <score/plugins/InterfaceList.hpp>
 #include <score/plugins/qt_interfaces/CommandFactory_QtInterface.hpp>
 #include <score/plugins/qt_interfaces/FactoryInterface_QtInterface.hpp>
-#include <score/plugins/qt_interfaces/PluginRequirements_QtInterface.hpp>
 #include <score/plugins/qt_interfaces/GUIApplicationPlugin_QtInterface.hpp>
+#include <score/plugins/qt_interfaces/PluginRequirements_QtInterface.hpp>
 
 #include <QObject>
 
@@ -27,5 +27,6 @@ private:
       const score::ApplicationContext& ctx,
       const score::InterfaceKey& key) const override;
 
-  score::GUIApplicationPlugin* make_guiApplicationPlugin(const score::GUIApplicationContext& app) override;
+  score::GUIApplicationPlugin*
+  make_guiApplicationPlugin(const score::GUIApplicationContext& app) override;
 };

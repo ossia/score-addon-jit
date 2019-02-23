@@ -1,10 +1,10 @@
 #pragma once
-#include <JitCpp/Compiler/Linker.hpp>
 #include <JitCpp/ClangDriver.hpp>
-#include <llvm/ExecutionEngine/Orc/IRCompileLayer.h>
-#include <llvm/ExecutionEngine/Orc/CompileUtils.h>
-#include <llvm/ExecutionEngine/SectionMemoryManager.h>
+#include <JitCpp/Compiler/Linker.hpp>
 #include <llvm/ExecutionEngine/JITEventListener.h>
+#include <llvm/ExecutionEngine/Orc/CompileUtils.h>
+#include <llvm/ExecutionEngine/Orc/IRCompileLayer.h>
+#include <llvm/ExecutionEngine/SectionMemoryManager.h>
 #include <llvm/IR/Mangler.h>
 
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -20,13 +20,12 @@ class JitCompiler
 {
   struct NotifyObjectLoaded_t
   {
-    NotifyObjectLoaded_t(JitCompiler& jit) : Jit(jit)
-    {
-    }
+    NotifyObjectLoaded_t(JitCompiler& jit) : Jit(jit) {}
 
     // Called by the ObjectLayer for each emitted object.
     // Forward notification to GDB JIT interface.
-    void operator()(llvm::orc::VModuleKey,
+    void operator()(
+        llvm::orc::VModuleKey,
         const llvm::object::ObjectFile& obj,
         const llvm::LoadedObjectInfo& info)
     {
@@ -55,17 +54,28 @@ class JitCompiler
       = llvm::orc::LegacyIRCompileLayer<ObjectLayer_t, IRCompiler_t>;
 #endif
   llvm::orc::ExecutionSession es;
+
 public:
-  std::shared_ptr<llvm::RuntimeDyld::MemoryManager> m_memoryManager = std::make_shared<llvm::SectionMemoryManager>();
+  std::shared_ptr<llvm::RuntimeDyld::MemoryManager> m_memoryManager
+      = std::make_shared<llvm::SectionMemoryManager>();
   JitCompiler(llvm::TargetMachine& targetMachine)
       : DL(targetMachine.createDataLayout())
-      , SymbolResolverPtr{llvm::orc::createLegacyLookupResolver(es, [&] (const std::string& name) {
-    if(auto res = findSymbolInJITedCode(name))
-      return res;
-    return findSymbolInHostProcess(name);
-  }, {})}
+      , SymbolResolverPtr{llvm::orc::createLegacyLookupResolver(
+            es,
+            [&](const std::string& name) {
+              if (auto res = findSymbolInJITedCode(name))
+                return res;
+              return findSymbolInHostProcess(name);
+            },
+            {})}
       , NotifyObjectLoaded(*this)
-      , ObjectLayer(es, [this] (llvm::orc::VModuleKey) { return ObjectLayer_t::Resources{m_memoryManager, SymbolResolverPtr}; }, NotifyObjectLoaded)
+      , ObjectLayer(
+            es,
+            [this](llvm::orc::VModuleKey) {
+              return ObjectLayer_t::Resources{m_memoryManager,
+                                              SymbolResolverPtr};
+            },
+            NotifyObjectLoaded)
       , CompileLayer(ObjectLayer, IRCompiler_t(targetMachine))
   {
     // Load own executable as dynamic library.
@@ -78,9 +88,9 @@ public:
   }
 
   auto compile(
-      const std::string& cppCode
-      , const std::vector<std::string>& flags
-      , llvm::LLVMContext& context)
+      const std::string& cppCode,
+      const std::vector<std::string>& flags,
+      llvm::LLVMContext& context)
   {
     auto module = compileModule(cppCode, flags, context);
     if (!module)
@@ -92,11 +102,10 @@ public:
     return std::move(*module);
   }
 
-  llvm::Expected<std::unique_ptr<llvm::Module>>
-  compileModule(
-      const std::string& cppCode
-      , const std::vector<std::string>& flags
-      , llvm::LLVMContext& context)
+  llvm::Expected<std::unique_ptr<llvm::Module>> compileModule(
+      const std::string& cppCode,
+      const std::vector<std::string>& flags,
+      llvm::LLVMContext& context)
   {
     return ClangDriver.compileTranslationUnit(cppCode, flags, context);
   }
@@ -108,8 +117,7 @@ public:
     // the layers used here issue Errors from this call.
     static llvm::orc::VModuleKey k = 0;
     k++;
-    llvm::cantFail(
-        CompileLayer.addModule(k, std::move(module)));
+    llvm::cantFail(CompileLayer.addModule(k, std::move(module)));
   }
 
   template <class Signature_t>

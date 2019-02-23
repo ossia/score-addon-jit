@@ -1,12 +1,13 @@
 #include "JitModel.hpp"
-#include <JitCpp/EditScript.hpp>
-#include <JitCpp/Compiler/Driver.hpp>
 
 #include <QDialog>
 #include <QDialogButtonBox>
 #include <QPlainTextEdit>
-#include <QVBoxLayout>
 #include <QPushButton>
+#include <QVBoxLayout>
+
+#include <JitCpp/Compiler/Driver.hpp>
+#include <JitCpp/EditScript.hpp>
 //#include <JitCpp/Commands/EditJitEffect.hpp>
 
 #include <Process/Dataflow/PortFactory.hpp>
@@ -31,7 +32,9 @@ namespace Jit
 {
 
 JitEffectModel::JitEffectModel(
-    TimeVal t, const QString& jitProgram, const Id<Process::ProcessModel>& id,
+    TimeVal t,
+    const QString& jitProgram,
+    const Id<Process::ProcessModel>& id,
     QObject* parent)
     : Process::ProcessModel{t, id, "Jit", parent}
 {
@@ -39,33 +42,31 @@ JitEffectModel::JitEffectModel(
   setScript(jitProgram);
 }
 
-JitEffectModel::~JitEffectModel()
-{
-}
+JitEffectModel::~JitEffectModel() {}
 
 JitEffectModel::JitEffectModel(JSONObject::Deserializer& vis, QObject* parent)
-  : Process::ProcessModel{vis, parent}
+    : Process::ProcessModel{vis, parent}
 {
   vis.writeTo(*this);
   init();
 }
 
 JitEffectModel::JitEffectModel(DataStream::Deserializer& vis, QObject* parent)
-  : Process::ProcessModel{vis, parent}
+    : Process::ProcessModel{vis, parent}
 {
   vis.writeTo(*this);
   init();
 }
 
 JitEffectModel::JitEffectModel(JSONObject::Deserializer&& vis, QObject* parent)
-  : Process::ProcessModel{vis, parent}
+    : Process::ProcessModel{vis, parent}
 {
   vis.writeTo(*this);
   init();
 }
 
 JitEffectModel::JitEffectModel(DataStream::Deserializer&& vis, QObject* parent)
-  : Process::ProcessModel{vis, parent}
+    : Process::ProcessModel{vis, parent}
 {
   vis.writeTo(*this);
   init();
@@ -77,15 +78,12 @@ void JitEffectModel::setScript(const QString& txt)
   reload();
 }
 
-void JitEffectModel::init()
-{
-}
+void JitEffectModel::init() {}
 
 QString JitEffectModel::prettyName() const noexcept
 {
   return "Jit";
 }
-
 
 struct inlet_vis
 {
@@ -111,10 +109,7 @@ struct inlet_vis
     return i;
   }
 
-  Process::Inlet* operator()()
-  {
-    return nullptr;
-  }
+  Process::Inlet* operator()() { return nullptr; }
 };
 
 struct outlet_vis
@@ -140,20 +135,17 @@ struct outlet_vis
     i->type = Process::PortType::Message;
     return i;
   }
-  Process::Outlet* operator()()
-  {
-    return nullptr;
-  }
+  Process::Outlet* operator()() { return nullptr; }
 };
 
 void JitEffectModel::reload()
 {
   // FIXME dispos of them once unused at execution
   static std::list<std::shared_ptr<NodeCompiler>> old_compilers;
-  if(m_compiler)
+  if (m_compiler)
   {
     old_compilers.push_front(std::move(m_compiler));
-    if(old_compilers.size() > 5)
+    if (old_compilers.size() > 5)
       old_compilers.pop_back();
   }
 
@@ -219,7 +211,8 @@ void JitEffectModel::reload()
 }
 
 JitEditDialog::JitEditDialog(
-    const JitEffectModel& fx, const score::DocumentContext& ctx,
+    const JitEffectModel& fx,
+    const score::DocumentContext& ctx,
     QWidget* parent)
     : QDialog{parent}, m_effect{fx}
 {
@@ -235,22 +228,21 @@ JitEditDialog::JitEditDialog(
   lay->addWidget(m_textedit);
   lay->addWidget(m_error);
   auto bbox = new QDialogButtonBox{
-      QDialogButtonBox::Ok | QDialogButtonBox::Reset | QDialogButtonBox::Close, this};
+      QDialogButtonBox::Ok | QDialogButtonBox::Reset | QDialogButtonBox::Close,
+      this};
   bbox->button(QDialogButtonBox::Ok)->setText(tr("Compile"));
   bbox->button(QDialogButtonBox::Reset)->setText(tr("Clear log"));
-  connect(bbox->button(QDialogButtonBox::Reset), &QPushButton::clicked,
-          this, [=] {
-    m_error->clear();
-  });
+  connect(
+      bbox->button(QDialogButtonBox::Reset), &QPushButton::clicked, this, [=] {
+        m_error->clear();
+      });
   lay->addWidget(bbox);
   connect(bbox, &QDialogButtonBox::accepted, this, [&] {
-    CommandDispatcher<>{ctx.commandStack}.submit(
-         new EditScript{fx, text()});
+    CommandDispatcher<>{ctx.commandStack}.submit(new EditScript{fx, text()});
   });
   connect(bbox, &QDialogButtonBox::rejected, this, &QDialog::reject);
 
-  con(fx, &JitEffectModel::errorMessage,
-      this, [=] (const QString& txt) {
+  con(fx, &JitEffectModel::errorMessage, this, [=](const QString& txt) {
     m_error->setPlainText(txt);
   });
 }
@@ -273,8 +265,11 @@ template <>
 void DataStreamWriter::write(Jit::JitEffectModel& eff)
 {
   writePorts(
-        *this, components.interfaces<Process::PortFactoryList>(), eff.m_inlets,
-        eff.m_outlets, &eff);
+      *this,
+      components.interfaces<Process::PortFactoryList>(),
+      eff.m_inlets,
+      eff.m_outlets,
+      &eff);
 
   m_stream >> eff.m_text;
   eff.reload();
@@ -291,8 +286,11 @@ template <>
 void JSONObjectWriter::write(Jit::JitEffectModel& eff)
 {
   writePorts(
-        obj, components.interfaces<Process::PortFactoryList>(), eff.m_inlets,
-        eff.m_outlets, &eff);
+      obj,
+      components.interfaces<Process::PortFactoryList>(),
+      eff.m_inlets,
+      eff.m_outlets,
+      &eff);
   eff.m_text = obj["Text"].toString();
   eff.reload();
 }
@@ -340,7 +338,6 @@ extern "C" ossia::graph_node* score_graph_node_factory() {
 )_";
 }
 
-
 template <>
 Process::Descriptor
 EffectProcessFactory_T<Jit::JitEffectModel>::descriptor(QString d) const
@@ -353,8 +350,10 @@ namespace Execution
 {
 
 Execution::JitEffectComponent::JitEffectComponent(
-    Jit::JitEffectModel& proc, const Execution::Context& ctx,
-    const Id<score::Component>& id, QObject* parent)
+    Jit::JitEffectModel& proc,
+    const Execution::Context& ctx,
+    const Id<score::Component>& id,
+    QObject* parent)
     : ProcessComponent_T{proc, ctx, id, "JitComponent", parent}
 {
   if (proc.factory)
@@ -367,7 +366,5 @@ Execution::JitEffectComponent::JitEffectComponent(
   }
 }
 
-JitEffectComponent::~JitEffectComponent()
-{
-}
+JitEffectComponent::~JitEffectComponent() {}
 }

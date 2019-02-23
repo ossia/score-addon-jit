@@ -9,7 +9,9 @@ namespace score
 FileDownloader::FileDownloader(QUrl imageUrl)
 {
   connect(
-      &m_mgr, &QNetworkAccessManager::finished, this,
+      &m_mgr,
+      &QNetworkAccessManager::finished,
+      this,
       &FileDownloader::fileDownloaded);
 
   QNetworkRequest request(imageUrl);

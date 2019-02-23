@@ -2,10 +2,11 @@
 
 #include <score/command/Command.hpp>
 #include <score/model/path/Path.hpp>
-#include <JitCpp/JitModel.hpp>
 #include <score/model/path/PathSerialization.hpp>
 
 #include <QString>
+
+#include <JitCpp/JitModel.hpp>
 
 namespace Jit
 {
@@ -17,7 +18,10 @@ const CommandGroupKey& CommandFactoryName()
 
 class EditScript final : public score::Command
 {
-  SCORE_COMMAND_DECL(Jit::CommandFactoryName(), EditScript, "Edit a C++ script")
+  SCORE_COMMAND_DECL(
+      Jit::CommandFactoryName(),
+      EditScript,
+      "Edit a C++ script")
 public:
   EditScript(const JitEffectModel& model, const QString& text)
       : m_model{model}, m_new{text}
@@ -44,6 +48,7 @@ public:
   {
     s >> m_model >> m_old >> m_new;
   }
+
 private:
   Path<JitEffectModel> m_model;
   QString m_old, m_new;

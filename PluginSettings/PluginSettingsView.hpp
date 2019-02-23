@@ -23,19 +23,10 @@ class PluginSettingsView : public score::GlobalSettingsView
 public:
   PluginSettingsView();
 
-  QTableView* localView()
-  {
-    return m_addonsOnSystem;
-  }
-  QTableView* remoteView()
-  {
-    return m_remoteAddons;
-  }
+  QTableView* localView() { return m_addonsOnSystem; }
+  QTableView* remoteView() { return m_remoteAddons; }
 
-  QPushButton& installButton() const
-  {
-    return *m_install;
-  }
+  QPushButton& installButton() const { return *m_install; }
 
   QWidget* getWidget() override;
 

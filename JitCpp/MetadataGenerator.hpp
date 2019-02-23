@@ -1,10 +1,11 @@
 #pragma once
-#include <QRegularExpression>
 #include <QDir>
 #include <QDirIterator>
 #include <QFile>
-#include <QJsonObject>
 #include <QJsonDocument>
+#include <QJsonObject>
+#include <QRegularExpression>
+
 #include <vector>
 
 namespace Jit
@@ -17,26 +18,30 @@ struct AddonData
   std::vector<std::pair<QString, QString>> files;
 };
 
-//! Combines all the source files of an addon into a single unity file to make build faster
-static
-AddonData loadAddon(const QString& addon)
+//! Combines all the source files of an addon into a single unity file to make
+//! build faster
+static AddonData loadAddon(const QString& addon)
 {
   AddonData data;
-  if(QFile f(addon + "/addon.json"); f.open(QIODevice::ReadOnly))
+  if (QFile f(addon + "/addon.json"); f.open(QIODevice::ReadOnly))
     data.addon_info = QJsonDocument::fromJson(f.readAll()).object();
 
   std::string cpp_files;
   std::vector<std::pair<QString, QString>> files;
-  QDirIterator it{addon, {"*.cpp", "*.hpp"}, QDir::Filter::Files | QDir::Filter::NoDotAndDotDot, QDirIterator::Subdirectories};
+  QDirIterator it{addon,
+                  {"*.cpp", "*.hpp"},
+                  QDir::Filter::Files | QDir::Filter::NoDotAndDotDot,
+                  QDirIterator::Subdirectories};
 
-  while(it.hasNext())
+  while (it.hasNext())
   {
-    if(QFile f(it.next()); f.open(QIODevice::ReadOnly))
+    if (QFile f(it.next()); f.open(QIODevice::ReadOnly))
     {
       QFileInfo fi{f};
-      if(fi.suffix() == "cpp")
+      if (fi.suffix() == "cpp")
       {
-        data.unity_cpp.append("#include \""+ it.filePath().toStdString() + "\"\n");
+        data.unity_cpp.append(
+            "#include \"" + it.filePath().toStdString() + "\"\n");
       }
 
       data.files.push_back({fi.filePath(), f.readAll()});
@@ -45,30 +50,34 @@ AddonData loadAddon(const QString& addon)
   return data;
 }
 
-//! Generates the score_myaddon_commands.hpp and score_myaddon_command_list.hpp files
-static
-void generateCommandFiles(
-    const QString& output
-    , const QString& addon_path
-    , const std::vector<std::pair<QString, QString>>& files)
+//! Generates the score_myaddon_commands.hpp and score_myaddon_command_list.hpp
+//! files
+static void generateCommandFiles(
+    const QString& output,
+    const QString& addon_path,
+    const std::vector<std::pair<QString, QString>>& files)
 {
-  QRegularExpression decl("SCORE_COMMAND_DECL\\([A-Za-z_0-9,:<>\r\n\t ]*\\(\\)[A-Za-z_0-9,\"':<>\r\n\t ]*\\)");
-  QRegularExpression decl_t("SCORE_COMMAND_DECL_T\\([A-Za-z_0-9,:<>\r\n\t ]*\\)");
+  QRegularExpression decl(
+      "SCORE_COMMAND_DECL\\([A-Za-z_0-9,:<>\r\n\t "
+      "]*\\(\\)[A-Za-z_0-9,\"':<>\r\n\t ]*\\)");
+  QRegularExpression decl_t(
+      "SCORE_COMMAND_DECL_T\\([A-Za-z_0-9,:<>\r\n\t ]*\\)");
 
   QString includes;
   QString commands;
-  for(const auto& f : files)
+  for (const auto& f : files)
   {
     {
       auto res = decl.globalMatch(f.second);
-      while(res.hasNext())
+      while (res.hasNext())
       {
         auto match = res.next();
-        if(auto txt = match.capturedTexts(); !txt.empty())
+        if (auto txt = match.capturedTexts(); !txt.empty())
         {
-          if(auto split = txt[0].split(","); split.size() > 1)
+          if (auto split = txt[0].split(","); split.size() > 1)
           {
-            auto filename = f.first; filename.remove(addon_path + "/");
+            auto filename = f.first;
+            filename.remove(addon_path + "/");
             includes += "#include <" + filename + ">\n";
             commands += split[1] + ",\n";
           }
@@ -95,11 +104,10 @@ void generateCommandFiles(
 }
 
 //! Generates a score_myaddon_export.h file suitable for a static build
-static
-void generateExportFile(
-      const QString& addon_files_path
-      , const QString& addon_name
-      , const QByteArray& addon_export)
+static void generateExportFile(
+    const QString& addon_files_path,
+    const QString& addon_name,
+    const QByteArray& addon_export)
 {
   QFile export_file = addon_files_path + "/" + addon_name + "_export.h";
   export_file.open(QIODevice::WriteOnly);
@@ -114,18 +122,18 @@ void generateExportFile(
   export_file.close();
 }
 
-//! Given an addon, generates all the files needed for the build of this addon ;
-//! this is the same that CMake would generate into the addon's build dir.
-static
-QString generateAddonFiles(
-      QString addon_name
-      , const QString& addon
-      , const std::vector<std::pair<QString, QString>>& files)
+//! Given an addon, generates all the files needed for the build of this addon
+//! ; this is the same that CMake would generate into the addon's build dir.
+static QString generateAddonFiles(
+    QString addon_name,
+    const QString& addon,
+    const std::vector<std::pair<QString, QString>>& files)
 {
   addon_name.replace("-", "_");
   QByteArray addon_export = addon_name.toUpper().toUtf8();
 
-  QString addon_files_path = QDir::tempPath() + "/score-tmp-build/" + addon_name;
+  QString addon_files_path
+      = QDir::tempPath() + "/score-tmp-build/" + addon_name;
   QDir{}.mkpath(addon_files_path);
   generateExportFile(addon_files_path, addon_name, addon_export);
   generateCommandFiles(addon_files_path, addon, files);

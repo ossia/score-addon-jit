@@ -3,8 +3,8 @@
 #include <JitCpp/JitUtils.hpp>
 #include <clang/Frontend/TextDiagnosticBuffer.h>
 
-#include <vector>
 #include <string>
+#include <vector>
 
 namespace Jit
 {
@@ -17,19 +17,20 @@ public:
 
   static ossia::optional<QDir> bitcodeDatabase();
 
-  llvm::Expected<std::unique_ptr<llvm::Module>>
-  compileTranslationUnit(const std::string& cppCode, const std::vector<std::string>& flags, llvm::LLVMContext& context);
+  llvm::Expected<std::unique_ptr<llvm::Module>> compileTranslationUnit(
+      const std::string& cppCode,
+      const std::vector<std::string>& flags,
+      llvm::LLVMContext& context);
 
 private:
   //! Default compiler arguments
-  static std::vector<std::string>
-  getClangCC1Args();
+  static std::vector<std::string> getClangCC1Args();
 
   //! Actual invocation of clang
-  static llvm::Error compileCppToBitcodeFile(const std::vector<std::string>& args);
+  static llvm::Error
+  compileCppToBitcodeFile(const std::vector<std::string>& args);
 
   std::vector<std::function<void()>> m_deleters;
 };
-
 
 }
