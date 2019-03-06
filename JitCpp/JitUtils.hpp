@@ -34,14 +34,16 @@ private:
 struct Timer
 {
   std::chrono::high_resolution_clock::time_point t0;
-  Timer()
+  std::string_view m_text;
+  Timer(std::string_view text = "")
+      : m_text{text}
   {
     t0 = decltype(t0)::clock::now();
   }
   ~Timer()
   {
     auto t1 = decltype(t0)::clock::now();
-    std::cerr << "Took time: " << std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count() << "\n";
+    std::cerr << " -- " << m_text << " took time: " << std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count() << "\n";
   }
 };
 

@@ -76,12 +76,27 @@ protected:
     JITSymbol getSymbol(StringRef Name, bool ExportedSymbolsOnly) {
       auto SymEntry = SymbolTable.find(Name);
       if (SymEntry == SymbolTable.end())
+      {
+        std::cerr << "getSymbol 1: " << Name.str().c_str() << std::endl;
+        if(Name.consume_front("_"))
+        {
+            return getSymbol(Name, ExportedSymbolsOnly);
+        }
         return nullptr;
+      }
       if (!SymEntry->second.getFlags().isExported() && ExportedSymbolsOnly)
+      {
+        std::cerr << "getSymbol 2: " << Name.str().c_str() << std::endl;
         return nullptr;
+      }
       if (!Finalized)
+      {
+        std::cerr << "getSymbol 3: " << Name.str().c_str() << std::endl;
         return JITSymbol(getSymbolMaterializer(Name),
                          SymEntry->second.getFlags());
+      }
+
+      std::cerr << "getSymbol OK: " << Name.str().c_str() << " -> " << SymEntry->second.getAddress() << std::endl;
       return JITSymbol(SymEntry->second);
     }
 
@@ -136,6 +151,7 @@ private:
     }
 
     Error finalize() override {
+        std::cerr << "STARTING TO FINALIZE\n";
       assert(PFC && "mapSectionAddress called on finalized LinkedObject");
 
       JITSymbolResolverAdapter ResolverAdapter(Parent.ES, *PFC->Resolver,
@@ -152,7 +168,10 @@ private:
       {
         auto SymTab = PFC->RTDyld->getSymbolTable();
         for (auto &KV : SymTab)
+        {
+          std::cerr << "finalizing: " << KV.first.str() << " -> " << KV.second.getAddress() << "\n";
           SymbolTable[KV.first] = KV.second;
+        }
       }
 
       if (Parent.NotifyLoaded)
@@ -198,8 +217,8 @@ private:
         if (Symbol.getFlags() & object::SymbolRef::SF_Undefined)
           continue;
         Expected<StringRef> SymbolName = Symbol.getName();
+
         // FIXME: Raise an error for bad symbols.
-        std::cerr << "symbol: " << SymbolName.get().str() << std::endl;
         if (!SymbolName) {
           consumeError(SymbolName.takeError());
           continue;
@@ -209,6 +228,8 @@ private:
 #else
         auto Flags = *JITSymbolFlags::fromObjectSymbol(Symbol);
 #endif
+
+        std::cerr << "initial symbol: " << SymbolName->str().c_str() << std::endl;
         SymbolTable.insert(
           std::make_pair(*SymbolName, JITEvaluatedSymbol(0, Flags)));
       }
@@ -297,6 +318,7 @@ public:
         *this, K, OwnedObject(std::move(*Obj), std::move(ObjBuffer)),
         std::move(R.MemMgr), std::move(R.Resolver), ProcessAllSections);
 
+    LinkedObjects[K]->finalize();
     return Error::success();
   }
 
@@ -324,7 +346,13 @@ public:
       if (auto Sym = KV.second->getSymbol(Name, ExportedSymbolsOnly))
         return Sym;
       else if (auto Err = Sym.takeError())
+      {
+
+          llvm::handleAllErrors(std::move(Err), [&](const llvm::ErrorInfoBase& EI) {
+            qDebug() << "SYMBOL ERROR: " << EI.message();
+          });
         return std::move(Err);
+      }
 
     return nullptr;
   }
@@ -493,17 +521,35 @@ public:
 private:
   llvm::JITSymbol findSymbolInJITedCode(std::string mangledName)
   {
+      qDebug() << "Looking for symbol in-bitcode: " << mangledName;
     constexpr bool exportedSymbolsOnly = false;
     return CompileLayer.findSymbol(mangledName, exportedSymbolsOnly);
   }
 
   llvm::JITSymbol findSymbolInHostProcess(std::string mangledName) const
   {
+      qDebug() << "Looking for symbol in-process: " << mangledName;
     // Lookup function address in the host symbol table.
     if (llvm::JITTargetAddress addr
         = llvm::RTDyldMemoryManager::getSymbolAddressInProcess(mangledName))
+    {
+      qDebug() << "OK ";
       return llvm::JITSymbol(addr, llvm::JITSymbolFlags::Exported);
+    }
 
+    qDebug() << "First try failed ";
+    if(mangledName[0] == '_')
+    {
+        mangledName.erase(0, 1);
+
+        if (llvm::JITTargetAddress addr
+            = llvm::RTDyldMemoryManager::getSymbolAddressInProcess(mangledName))
+        {
+            qDebug() << "OK ";
+            return llvm::JITSymbol(addr, llvm::JITSymbolFlags::Exported);
+        }
+        qDebug() << "Second try failed ";
+    }
     return nullptr;
   }
 

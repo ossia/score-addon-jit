@@ -11,8 +11,13 @@ struct jit_plugin_context
 {
   jit_plugin_context()
     : X{0, nullptr}
-    , jit{*llvm::EngineBuilder().selectTarget()}
+    , jit{new JitCompiler{*llvm::EngineBuilder().selectTarget()}}
   {
+  }
+
+  ~jit_plugin_context()
+  {
+      delete jit;
   }
 
   jit_plugin compile(const std::string& id, const std::string& sourceCode, std::vector<std::string> flags)
@@ -27,17 +32,30 @@ struct jit_plugin_context
 
     std::string cpp = *sourceFileName;
     auto filename = QFileInfo(QString::fromStdString(cpp)).fileName();
+#if defined(__APPLE__)
     auto global_init = "_GLOBAL__sub_I_" + filename.replace('-', '_');
-
+#elif defined(__linux__)
+    auto global_init = "_GLOBAL__sub_I_" + filename.replace('-', '_');
+#else
+#endif
     qDebug() << "Looking for: " << global_init;
-    auto module = jit.compile(cpp, flags, context);
+    auto module = jit->compile(cpp, flags, context);
     {
-      auto globals_init = jit.getFunction<void()>(global_init.toStdString());
-      SCORE_ASSERT(globals_init);
-      (*globals_init)();
+      auto globals_init = jit->getFunction<void()>(global_init.toStdString());
+      if(globals_init)
+      {
+          (*globals_init)();
+      }
+      else
+      {
+          llvm::handleAllErrors(globals_init.takeError(), [&](const llvm::ErrorInfoBase& EI) {
+              qDebug() << "Did not find : " << global_init << EI.message();
+          });
+          throw std::runtime_error("Invalid plugin");
+      }
     }
 
-    auto jitedFn = jit.getFunction<score::Plugin_QtInterface* ()>("plugin_instance_" + id);
+    auto jitedFn = jit->getFunction<score::Plugin_QtInterface* ()>("plugin_instance_" + id);
     if (!jitedFn)
       throw Exception{jitedFn.takeError()};
 
@@ -54,20 +72,20 @@ struct jit_plugin_context
 
   llvm::PrettyStackTraceProgram X;
   llvm::LLVMContext context;
-  JitCompiler jit;
+  JitCompiler* jit;
 };
 
 AddonCompiler::AddonCompiler()
 {
-  connect(this, &AddonCompiler::submitJob, this, &AddonCompiler::on_job, Qt::QueuedConnection);
-  this->moveToThread(&m_thread);
-  m_thread.start();
+  connect(this, &AddonCompiler::submitJob, this, &AddonCompiler::on_job, Qt::DirectConnection);
+  //this->moveToThread(&m_thread);
+  //m_thread.start();
 }
 
 AddonCompiler::~AddonCompiler()
 {
-  m_thread.exit(0);
-  m_thread.wait();
+  //m_thread.exit(0);
+  //m_thread.wait();
 }
 
 void AddonCompiler::on_job(const std::string& id, const std::string& cpp, const std::vector<std::string>& flags)

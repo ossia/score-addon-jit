@@ -74,6 +74,8 @@ static inline void populateCompileOptions(std::vector<std::string>& args)
 
   args.push_back("-std=c++1z");
   args.push_back("-disable-free");
+  args.push_back("-disable-llvm-verifier");
+  args.push_back("-discard-value-names");
   args.push_back("-fdeprecated-macro");
   args.push_back("-fmath-errno");
   args.push_back("-fuse-init-array");
@@ -91,7 +93,7 @@ static inline void populateCompileOptions(std::vector<std::string>& args)
 
   args.push_back("-fcxx-exceptions");
   args.push_back("-fno-use-cxa-atexit");
-
+#if 0
   args.push_back("-Ofast");
   // -Ofast stuff:
   args.push_back("-menable-no-infs");
@@ -104,30 +106,38 @@ static inline void populateCompileOptions(std::vector<std::string>& args)
   args.push_back("-ffp-contract=fast");
   args.push_back("-ffast-math");
   args.push_back("-ffinite-math-only");
+#endif
 
   args.push_back("-mrelocation-model"); args.push_back("pic");
   args.push_back("-pic-level"); args.push_back("2");
   args.push_back("-pic-is-pie");
 
   // if fsanitize:
-  args.push_back("-mrelax-all");
-  args.push_back("-disable-llvm-verifier");
-  args.push_back("-discard-value-names");
 #if defined(__SANITIZE_ADDRESS__)
   args.push_back("-fsanitize=address,alignment,array-bounds,bool,builtin,enum,float-cast-overflow,float-divide-by-zero,function,integer-divide-by-zero,nonnull-attribute,null,pointer-overflow,return,returns-nonnull-attribute,shift-base,shift-exponent,signed-integer-overflow,unreachable,vla-bound,vptr,unsigned-integer-overflow,implicit-integer-truncation");
   args.push_back("-fsanitize-recover=alignment,array-bounds,bool,builtin,enum,float-cast-overflow,float-divide-by-zero,function,integer-divide-by-zero,nonnull-attribute,null,pointer-overflow,returns-nonnull-attribute,shift-base,shift-exponent,signed-integer-overflow,vla-bound,vptr,unsigned-integer-overflow,implicit-integer-truncation");
   args.push_back("-fsanitize-blacklist=/usr/lib/clang/7.0.0/share/asan_blacklist.txt");
   args.push_back("-fsanitize-address-use-after-scope");
-  args.push_back("-mdisable-fp-elim");
 #endif
-  args.push_back("-fno-assume-sane-operator-new");
-  args.push_back("-stack-protector"); args.push_back("0");
+  args.push_back("-mdisable-fp-elim");
+  args.push_back("-fcxx-exceptions");
   args.push_back("-fexceptions");
-  args.push_back("-faddrsig");
 
   args.push_back("-momit-leaf-frame-pointer");
   args.push_back("-vectorize-loops");
   args.push_back("-vectorize-slp");
+
+#if defined(__APPLE__)
+  args.push_back("-fobjc-runtime=macosx-10.14.0");
+  args.push_back("-fmax-type-align=16");
+  args.push_back("-stack-protector"); args.push_back("1");
+#else
+  args.push_back("-mrelax-all");
+  args.push_back("-stack-protector"); args.push_back("0");
+  args.push_back("-faddrsig");
+  args.push_back("-fno-assume-sane-operator-new");
+#endif
+
 }
 
 
@@ -270,11 +280,14 @@ static inline void populateIncludeDirs(std::vector<std::string>& args)
 
   qDebug() << "SDK located: " << QString::fromStdString(sdk);
 
+  std::string llvm_ver = SCORE_LLVM_VERSION;
+  if(llvm_ver.find("svn") != llvm_ver.npos)
+      llvm_ver.resize(llvm_ver.size() - 3);
   args.push_back("-resource-dir");
-  args.push_back(sdk + "/lib/clang/" SCORE_LLVM_VERSION);
+  args.push_back(sdk + "/lib/clang/" + llvm_ver);
 
   args.push_back("-internal-isystem");
-  args.push_back(sdk + "/lib/clang/" SCORE_LLVM_VERSION "/include");
+  args.push_back(sdk + "/lib/clang/" + llvm_ver + "/include");
 
   auto include = [&] (const auto& path){ args.push_back("-I" + sdk + "/include/" + path); };
 

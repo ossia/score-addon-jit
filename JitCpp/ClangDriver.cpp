@@ -27,7 +27,10 @@ QDir ClangCC1Driver::bitcodeDatabase()
   if(caches.empty())
     return {};
 
-  return QDir{caches.front() + "/score-jit"};
+  QString cache_path = caches.front() + QDir::separator() + "score-jit";
+  qDebug() << "JIT cache: " << cache_path;
+  QDir{}.mkpath(cache_path);
+  return QDir{cache_path};
 }
 
 static QString hashFile(const QString& path)
@@ -38,7 +41,7 @@ static QString hashFile(const QString& path)
   QCryptographicHash hash{QCryptographicHash::Sha1};
   hash.addData(&f);
 
-  return hash.result().toBase64();
+  return hash.result().toHex();
 }
 
 llvm::Expected<std::unique_ptr<llvm::Module>>
@@ -68,7 +71,7 @@ ClangCC1Driver::compileTranslationUnit(
   flags_vec.push_back(cpp);
 
   {
-    Timer t;
+    Timer t("Preprocessing");
     llvm::Error err = compileCppToBitcodeFile(flags_vec);
     if (err)
       return std::move(err);
@@ -104,20 +107,22 @@ ClangCC1Driver::compileTranslationUnit(
     flags_vec.push_back(bc);
     flags_vec.push_back(cpp);
 
-    Timer t;
+    Timer t("Compilation");
     llvm::Error err = compileCppToBitcodeFile(flags_vec);
     if (err)
       return std::move(err);
 
     if(cache_dir.exists())
     {
+        qDebug() << "copying" << QString::fromStdString(bc)
+                 << "to" << cache_dir.absolutePath() + "/" + preproc_hash + ".bc";
       QFile f(QString::fromStdString(bc));
-      f.copy(cache_dir.absolutePath() + "/" + preproc_hash + ".bc");
+      qDebug() << f.copy(cache_dir.absolutePath() + "/" + preproc_hash + ".bc");
     }
   }
 
   // Load the bitcode
-  Timer t;
+  Timer t("Module loading");
   auto module = readModuleFromBitcodeFile(bc, context);
 
   llvm::sys::fs::remove(bc);
@@ -144,6 +149,13 @@ std::vector<std::string> ClangCC1Driver::getClangCC1Args()
   populateIncludeDirs(args);
   populateCompileOptions(args);
   populateDefinitions(args);
+
+  for(auto p : args)
+
+  {
+      std::cerr << p << std::endl;
+      qDebug() << p;
+  }
 
   /*
     for(const auto& arg : args)
