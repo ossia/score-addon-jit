@@ -27,9 +27,11 @@
 #endif
 namespace Jit
 {
+#define SCORE_DEPLOYMENT_BUILD 1
 static inline std::string locateSDK()
 {
   auto appFolder = qApp->applicationDirPath();
+
 #if defined(SCORE_DEPLOYMENT_BUILD)
 
 #if defined(_WIN32)
@@ -149,10 +151,15 @@ static inline void populateCompileOptions(std::vector<std::string>& args)
   args.push_back("-fcxx-exceptions");
   args.push_back("-fexceptions");
   args.push_back("-faddrsig");
+#if defined(_WIN32)
+  args.push_back("-fseh-exceptions");
+#endif
 
   args.push_back("-momit-leaf-frame-pointer");
   args.push_back("-vectorize-loops");
   args.push_back("-vectorize-slp");
+
+
 }
 
 static inline void populateDefinitions(std::vector<std::string>& args)

@@ -50,7 +50,7 @@ add_library(${PROJECT_NAME} ${SRCS} ${HDRS})
 find_package(LLVM REQUIRED PATHS ${LLVM_DIR})
 find_package(Clang REQUIRED PATHS ${LLVM_DIR}/../Clang)
 find_package(Polly PATHS ${LLVM_DIR}/../Polly)
-if(LLVM_VERSION MATCHES "7.*" OR LLVM_VERSION MATCHES "8.*")
+if(LLVM_VERSION MATCHES "7.*" OR LLVM_VERSION MATCHES "8.*" OR LLVM_VERSION MATCHES "9.*")
   message("-- LLVM version: ${LLVM_VERSION}")
 else()
   message(FATAL_ERROR "LLVM Version incompatible")
@@ -66,6 +66,10 @@ target_include_directories(score_addon_jit PUBLIC
 target_compile_definitions(score_addon_jit PUBLIC
     ${LLVM_DEFINITIONS}
 )
+
+if("${LLVM_PACKAGE_VERSION}" MATCHES "(.*)svn")
+  set(LLVM_PACKAGE_VERSION "${CMAKE_MATCH_1}")
+endif()
 
 target_compile_definitions(score_addon_jit
   PUBLIC
@@ -121,6 +125,8 @@ if(TARGET score_plugin_media)
   endif()
 endif()
 if(WIN32)
+  list(REMOVE_ITEM LLVM_LIBS LTO)
+  list(REMOVE_ITEM LLVM_LIBS OptRemarks)
   target_link_libraries(score_addon_jit PUBLIC -Wl,--start-group ${LLVM_LIBS} ${CLANG_LIBS} -Wl,--end-group mincore)
 elseif(APPLE)
   target_link_libraries(score_addon_jit PUBLIC ${CLANG_LIBS} ${POLLY_LIBS} ${LLVM_LIBS})
@@ -151,6 +157,14 @@ setup_score_plugin(${PROJECT_NAME})
 #         PATTERN "tests" EXCLUDE
 #         PATTERN "Tests" EXCLUDE
 # )
-add_executable(Benchmarker Benchmarks/Benchmarker.cpp)
-target_link_libraries(Benchmarker PUBLIC ${SCORE_PLUGINS_LIST})
+
+add_library(Benchmarker SHARED Benchmarks/Benchmarker.cpp)
+target_link_libraries(Benchmarker PUBLIC ${SCORE_PLUGINS_LIST} -Wl,--stack,16777216)
 set_target_properties(Benchmarker PROPERTIES ENABLE_EXPORTS 1)
+cotire(Benchmarker)
+install(TARGETS Benchmarker RUNTIME DESTINATION .)
+add_executable(bench_main Benchmarks/bench_main.cpp)
+target_link_libraries(bench_main PRIVATE Benchmarker -Wl,--stack,16777216)
+
+cotire(bench_main)
+install(TARGETS bench_main RUNTIME DESTINATION .)

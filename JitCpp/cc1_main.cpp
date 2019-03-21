@@ -266,7 +266,7 @@ int cc1_main(
   // When running with -disable-free, don't do any destruction or shutdown.
   if (Clang->getFrontendOpts().DisableFree)
   {
-#if (LLVM_VERSION_MAJOR < 8) || defined(_WIN32)
+#if (LLVM_VERSION_MAJOR < 8)
     BuryPointer(std::move(Clang));
 #else
     llvm::BuryPointer(std::move(Clang));

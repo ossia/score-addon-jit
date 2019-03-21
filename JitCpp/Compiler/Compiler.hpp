@@ -4,7 +4,9 @@
 #include <llvm/ExecutionEngine/JITEventListener.h>
 #include <llvm/ExecutionEngine/Orc/CompileUtils.h>
 #include <llvm/ExecutionEngine/Orc/IRCompileLayer.h>
+#include <llvm/ExecutionEngine/Orc/OrcError.h>
 #include <llvm/ExecutionEngine/SectionMemoryManager.h>
+#include <llvm/Support/DynamicLibrary.h>
 #include <llvm/IR/Mangler.h>
 
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -48,7 +50,7 @@ class JitCompiler
 
   using ObjectLayer_t = llvm::orc::ScoreLinkingLayer;
   using CompileLayer_t
-#if (LLVM_VERSION_MAJOR < 8) || defined(_WIN32)
+#if (LLVM_VERSION_MAJOR < 8)
       = llvm::orc::IRCompileLayer<ObjectLayer_t, IRCompiler_t>;
 #else
       = llvm::orc::LegacyIRCompileLayer<ObjectLayer_t, IRCompiler_t>;

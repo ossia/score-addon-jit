@@ -3,7 +3,11 @@
 #include <wobjectimpl.h>
 
 W_OBJECT_IMPL(Jit::AddonCompiler)
-
+#if defined(WIN32)
+namespace llvm::orc
+{
+}
+#endif
 namespace Jit
 {
 template <typename Fun_T>
@@ -75,14 +79,31 @@ void AddonCompiler::on_job(
     static std::list<std::unique_ptr<compiler_t>> ctx;
 
     flags.push_back("-DSCORE_JIT_ID=" + id);
+
+    qDebug() << "Creating compiler...";
     ctx.push_back(std::make_unique<compiler_t>("plugin_instance_" + id));
+
+    qDebug() << "Calling compiler...";
     auto jitedFn = (*ctx.back())(cpp, flags);
 
+    if(!jitedFn)
+    {
+      qDebug() << "could not compile plug-in: no factory";
+      return;
+    }
+
+    qDebug() << "Invoking instance...";
     auto instance = jitedFn();
     if (!instance)
-      throw std::runtime_error("No instance of plug-in");
-
-    jobCompleted(instance);
+    {
+      qDebug() << "could not compile plug-in: no instance";
+      return;
+    }
+    else
+    {
+      qDebug() << "Compiled ok !";
+      jobCompleted(instance);
+    }
   }
   catch (const std::runtime_error& e)
   {

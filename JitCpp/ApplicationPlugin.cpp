@@ -83,6 +83,8 @@ void ApplicationPlugin::initialize()
 {
   rescanNodes();
   rescanAddons();
+
+  // If we don't do this, the linker will strip the whole Qt5QuickWidgets lib altogether:
   delete new QQuickWidget;
 }
 
