@@ -92,7 +92,7 @@ ClangCC1Driver::compileTranslationUnit(
   std::string bitcodeFile;
   auto preproc_hash = hashFile(QString::fromStdString(preproc));
   {
-    if (cache_dir && cache_dir->exists())
+    if (0 && cache_dir && cache_dir->exists())
     {
       QDirIterator it(*cache_dir);
       while (it.hasNext())

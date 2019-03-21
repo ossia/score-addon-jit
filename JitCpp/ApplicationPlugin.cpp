@@ -81,7 +81,6 @@ void ApplicationPlugin::rescanNodes()
 }
 void ApplicationPlugin::initialize()
 {
-  return;
   rescanNodes();
   rescanAddons();
   delete new QQuickWidget;

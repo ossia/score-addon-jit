@@ -50,14 +50,14 @@ AddonCompiler::AddonCompiler()
       this,
       &AddonCompiler::on_job,
       Qt::QueuedConnection);
-  this->moveToThread(&m_thread);
-  m_thread.start();
+  //this->moveToThread(&m_thread);
+  //m_thread.start();
 }
 
 AddonCompiler::~AddonCompiler()
 {
-  m_thread.exit(0);
-  m_thread.wait();
+  //m_thread.exit(0);
+  //m_thread.wait();
 }
 
 void AddonCompiler::on_job(

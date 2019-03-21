@@ -107,6 +107,12 @@ endif()
 llvm_map_components_to_libnames(LLVM_LIBS
   all
 )
+
+list(FIND LLVM_LIBS LLVM LLVM_HAS_SHARED_LIBS)
+if("${LLVM_HAS_SHARED_LIBS}" GREATER 0)
+  set(LLVM_LIBS LLVM)
+endif()
+
 if(TARGET score_plugin_media)
   get_target_property(LIBS score_plugin_media LINK_LIBRARIES)
   list (FIND LIBS "/usr/local/lib/libfaust.so" _index)
