@@ -24,7 +24,7 @@
 
 #include <wobjectimpl.h>
 
-//#include <miniz.c>
+#include <miniz.c>
 W_OBJECT_IMPL(PluginSettings::PluginSettingsView)
 namespace PluginSettings
 {
@@ -66,7 +66,7 @@ bool make_folder(const QString& str)
 std::vector<QString> unzip(const QByteArray& zipFile, const QString& path)
 {
   std::vector<QString> files;
-  /*
+
   mz_zip_archive zip_archive;
   memset(&zip_archive, 0, sizeof(zip_archive));
 
@@ -116,7 +116,7 @@ std::vector<QString> unzip(const QByteArray& zipFile, const QString& path)
 
   // Close the archive, freeing any resources it was using
   mz_zip_reader_end(&zip_archive);
-  */
+
   return files;
 }
 }
@@ -304,6 +304,11 @@ void PluginSettingsView::install()
         // Extract the downloaded zip data
         auto res = zip_helper::unzip(arr, addons_path);
 
+        if(res.empty())
+        {
+          QMessageBox::warning(getWidget(), "Warning", "Could not extract" + addon.source.toString() + " in " + addons_path);
+          return;
+        }
         // We want the extracted folder to have the name of the addon
         {
           QDir addons_dir{addons_path};

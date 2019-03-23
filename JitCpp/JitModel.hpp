@@ -30,7 +30,7 @@ PROCESS_METADATA(
     QStringList{},
     {},
     {},
-    Process::ProcessFlags::ExternalEffect)
+    Process::ProcessFlags::SupportsAll)
 namespace Jit
 {
 template <typename Fun_T>
@@ -66,14 +66,16 @@ public:
 
   QString prettyName() const noexcept override;
   void setScript(const QString& txt);
+  void changed() W_SIGNAL(changed);
 
   Process::Inlets& inlets() { return m_inlets; }
   Process::Outlets& outlets() { return m_outlets; }
 
   NodeFactory factory;
 
-  void errorMessage(const QString& e) W_SIGNAL(errorMessage, e) private
-      : void init();
+  void errorMessage(const QString& e) W_SIGNAL(errorMessage, e);
+  private:
+  void init();
   void reload();
   QString m_text;
   std::unique_ptr<NodeCompiler> m_compiler;

@@ -157,14 +157,15 @@ setup_score_plugin(${PROJECT_NAME})
 #         PATTERN "tests" EXCLUDE
 #         PATTERN "Tests" EXCLUDE
 # )
-
-add_library(Benchmarker SHARED Benchmarks/Benchmarker.cpp)
-target_link_libraries(Benchmarker PUBLIC ${SCORE_PLUGINS_LIST} -Wl,--stack,16777216)
-set_target_properties(Benchmarker PROPERTIES ENABLE_EXPORTS 1)
-cotire(Benchmarker)
-install(TARGETS Benchmarker RUNTIME DESTINATION .)
-add_executable(bench_main Benchmarks/bench_main.cpp)
-target_link_libraries(bench_main PRIVATE Benchmarker -Wl,--stack,16777216)
-
-cotire(bench_main)
-install(TARGETS bench_main RUNTIME DESTINATION .)
+#
+# add_library(Benchmarker SHARED Benchmarks/Benchmarker.cpp)
+# target_link_libraries(Benchmarker PUBLIC ${SCORE_PLUGINS_LIST} -Wl,--stack,16777216)
+# set_target_properties(Benchmarker PROPERTIES ENABLE_EXPORTS 1)
+# cotire(Benchmarker)
+# install(TARGETS Benchmarker RUNTIME DESTINATION .)
+# add_executable(bench_main Benchmarks/bench_main.cpp)
+# target_link_libraries(bench_main PRIVATE Benchmarker -Wl,--stack,16777216)
+#
+# cotire(bench_main)
+# install(TARGETS bench_main RUNTIME DESTINATION .)
+#

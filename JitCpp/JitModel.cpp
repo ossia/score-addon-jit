@@ -104,9 +104,19 @@ struct inlet_vis
 
   Process::Inlet* operator()(const ossia::value_port& p)
   {
-    auto i = new Process::Inlet{getStrongId(self.inlets()), &self};
-    i->type = Process::PortType::Message;
-    return i;
+    if(!p.is_event)
+    {
+      auto i = new Process::Inlet{getStrongId(self.inlets()), &self};
+      i->type = Process::PortType::Message;
+      return i;
+    }
+    else
+    {
+      auto i = new Process::ControlInlet{getStrongId(self.inlets()), &self};
+      i->type = Process::PortType::Message;
+      i->setDomain(State::Domain{p.domain});
+      return i;
+    }
   }
 
   Process::Inlet* operator()() { return nullptr; }
@@ -208,6 +218,7 @@ void JitEffectModel::reload()
 
   inletsChanged();
   outletsChanged();
+  changed();
 }
 
 JitEditDialog::JitEditDialog(
@@ -356,14 +367,40 @@ Execution::JitEffectComponent::JitEffectComponent(
     QObject* parent)
     : ProcessComponent_T{proc, ctx, id, "JitComponent", parent}
 {
-  if (proc.factory)
-  {
-    this->node.reset(proc.factory());
-    if (this->node)
+  auto reset = [this, &proc, &ctx] {
+
+    if (proc.factory)
     {
-      m_ossia_process = std::make_shared<ossia::node_process>(node);
+      this->node.reset(proc.factory());
+      if (this->node)
+      {
+        m_ossia_process = std::make_shared<ossia::node_process>(node);
+
+        for (std::size_t i = 0; i < proc.inlets().size(); i++)
+        {
+          auto inlet = dynamic_cast<Process::ControlInlet*>(proc.inlets()[i]);
+          if(!inlet)
+            continue;
+
+          auto inl = node->inputs()[i];
+          inl->data.target<ossia::value_port>()->write_value(inlet->value(), {});
+          connect(inlet, &Process::ControlInlet::valueChanged,
+                  this, [this, inl] (const ossia::value& v) {
+
+            system().executionQueue.enqueue([inl, val = v]() mutable {
+              inl->data.target<ossia::value_port>()->write_value(
+                  std::move(val), 1);
+            });
+
+          });
+        }
+      }
     }
-  }
+  };
+  reset();
+  con(proc, &Jit::JitEffectModel::changed,
+      this, reset);
+
 }
 
 JitEffectComponent::~JitEffectComponent() {}

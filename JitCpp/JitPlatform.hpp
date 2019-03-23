@@ -128,6 +128,8 @@ static inline void populateCompileOptions(std::vector<std::string>& args)
   args.push_back("-disable-llvm-verifier");
   args.push_back("-discard-value-names");
 #if defined(__SANITIZE_ADDRESS__)
+  /*
+
   args.push_back(
       "-fsanitize=address,alignment,array-bounds,bool,builtin,enum,float-cast-"
       "overflow,float-divide-by-zero,function,integer-divide-by-zero,nonnull-"
@@ -144,6 +146,7 @@ static inline void populateCompileOptions(std::vector<std::string>& args)
       "-fsanitize-blacklist=/usr/lib/clang/7.0.0/share/asan_blacklist.txt");
   args.push_back("-fsanitize-address-use-after-scope");
   args.push_back("-mdisable-fp-elim");
+  */
 #endif
   args.push_back("-fno-assume-sane-operator-new");
   args.push_back("-stack-protector");
