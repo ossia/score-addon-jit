@@ -6,7 +6,7 @@ project(score_addon_jit LANGUAGES CXX)
 
 # General initialization
 score_common_setup()
-find_package(Qt5 5.12 REQUIRED COMPONENTS QuickWidgets)
+find_package(Qt5 5.9 REQUIRED COMPONENTS QuickWidgets)
 
 # Source files
 set(HDRS
