@@ -1,4 +1,3 @@
-cmake_minimum_required(VERSION 3.1)
 project(score_addon_jit LANGUAGES CXX)
 
 # Based on the code in
@@ -22,6 +21,8 @@ set(HDRS
     JitCpp/Compiler/Linker.hpp
     JitCpp/Compiler/Driver.hpp
 
+    Bytebeat/Bytebeat.hpp
+
     PluginSettings/PluginSettings.hpp
     PluginSettings/PluginSettingsModel.hpp
     PluginSettings/PluginSettingsPresenter.hpp
@@ -37,6 +38,8 @@ set(SRCS
     JitCpp/ClangDriver.cpp
     JitCpp/ApplicationPlugin.cpp
 
+    Bytebeat/Bytebeat.cpp
+
     PluginSettings/PluginSettingsModel.cpp
     PluginSettings/PluginSettingsPresenter.cpp
     PluginSettings/PluginSettingsView.cpp
@@ -46,7 +49,11 @@ set(SRCS
 )
 
 add_library(${PROJECT_NAME} ${SRCS} ${HDRS})
-
+if(TARGET score_addon_gfx)
+  set(HDRS ${HDRS} Texgen/Texgen.hpp)
+  target_sources(${PROJECT_NAME} PRIVATE Texgen/Texgen.hpp Texgen/Texgen.cpp)
+  target_link_libraries(${PROJECT_NAME} PRIVATE score_addon_gfx)
+endif()
 find_package(LLVM REQUIRED PATHS ${LLVM_DIR})
 find_package(Clang REQUIRED PATHS ${LLVM_DIR}/../Clang)
 find_package(Polly PATHS ${LLVM_DIR}/../Polly)
