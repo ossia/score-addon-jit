@@ -11,7 +11,7 @@
 #include <QTableView>
 #include <QWidget>
 
-#include <wobjectdefs.h>
+#include <verdigris>
 class QObject;
 
 namespace PluginSettings

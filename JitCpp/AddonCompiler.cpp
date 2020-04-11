@@ -10,42 +10,6 @@ namespace llvm::orc
 #endif
 namespace Jit
 {
-template <typename Fun_T>
-struct CompilerWrapper
-{
-  using impl_t = Driver<Fun_T>;
-  impl_t* m_impl{};
-
-  CompilerWrapper() = default;
-  ~CompilerWrapper() { delete m_impl; }
-
-  CompilerWrapper(const std::string& s) : m_impl{new impl_t{s}} {}
-
-  CompilerWrapper(const CompilerWrapper& other)
-  {
-    if (other.m_impl)
-      m_impl = new impl_t{other.m_impl->factory_name};
-  }
-
-  CompilerWrapper& operator=(const CompilerWrapper& other)
-  {
-    delete m_impl;
-    if (other.m_impl)
-      m_impl = {new impl_t{other.m_impl->factory_name}};
-    else
-      m_impl = nullptr;
-    return *this;
-  }
-
-  std::function<Fun_T>
-  operator()(const std::string& code, const std::vector<std::string>& args)
-  {
-    if (m_impl)
-      return (*m_impl)(code, args);
-    return {};
-  }
-};
-
 AddonCompiler::AddonCompiler()
 {
   connect(
@@ -67,7 +31,8 @@ AddonCompiler::~AddonCompiler()
 void AddonCompiler::on_job(
     std::string id,
     std::string cpp,
-    std::vector<std::string> flags)
+    std::vector<std::string> flags,
+    CompilerOptions opts)
 {
   try
   {
@@ -84,7 +49,7 @@ void AddonCompiler::on_job(
     ctx.push_back(std::make_unique<compiler_t>("plugin_instance_" + id));
 
     qDebug() << "Calling compiler...";
-    auto jitedFn = (*ctx.back())(cpp, flags);
+    auto jitedFn = (*ctx.back())(cpp, flags, opts);
 
     if(!jitedFn)
     {
@@ -109,11 +74,6 @@ void AddonCompiler::on_job(
   {
     qDebug() << "could not compile plug-in: " << e.what();
   }
-}
-
-CustomCompiler makeCustomCompiler(const std::string& function)
-{
-  return CompilerWrapper<void()>{function};
 }
 
 }

@@ -1,4 +1,6 @@
 #pragma once
+#include <JitCpp/EditScript.hpp>
+
 #include <Process/Execution/ProcessComponent.hpp>
 #include <Process/GenericProcessFactory.hpp>
 #include <Process/Process.hpp>
@@ -8,7 +10,7 @@
 #include <ossia/dataflow/graph_node.hpp>
 #include <ossia/dataflow/node_process.hpp>
 
-#include <QDialog>
+#include <Process/Script/ScriptEditor.hpp>
 
 #include <Control/DefaultEffectItem.hpp>
 #include <Effect/EffectFactory.hpp>
@@ -61,11 +63,12 @@ public:
   JitEffectModel(JSONObject::Deserializer&& vis, QObject* parent);
 
   const QString& script() const { return m_text; }
+  void setScript(const QString& txt);
+  void scriptChanged(const QString& txt) W_SIGNAL(scriptChanged, txt);
 
   static constexpr bool hasExternalUI() noexcept { return true; }
 
   QString prettyName() const noexcept override;
-  void setScript(const QString& txt);
   void changed() W_SIGNAL(changed);
 
   Process::Inlets& inlets() { return m_inlets; }
@@ -74,12 +77,19 @@ public:
   NodeFactory factory;
 
   void errorMessage(const QString& e) W_SIGNAL(errorMessage, e);
+  PROPERTY(QString, script READ script WRITE setScript NOTIFY scriptChanged)
   private:
   void init();
   void reload();
   QString m_text;
   std::unique_ptr<NodeCompiler> m_compiler;
 };
+using JitEffectFactory = Process::EffectProcessFactory_T<Jit::JitEffectModel>;
+using LayerFactory = Process::EffectLayerFactory_T<
+    JitEffectModel,
+    Media::Effect::DefaultEffectItem,
+    Process::ProcessScriptEditDialog<JitEffectModel, JitEffectModel::p_script>
+>;
 }
 
 namespace Process
@@ -91,31 +101,6 @@ EffectProcessFactory_T<Jit::JitEffectModel>::customConstructionData() const;
 template <>
 Process::Descriptor
 EffectProcessFactory_T<Jit::JitEffectModel>::descriptor(QString d) const;
-}
-class QPlainTextEdit;
-namespace Jit
-{
-struct JitEditDialog : public QDialog
-{
-  const JitEffectModel& m_effect;
-
-  QPlainTextEdit* m_textedit{};
-  QPlainTextEdit* m_error{};
-
-public:
-  JitEditDialog(
-      const JitEffectModel& e,
-      const score::DocumentContext& ctx,
-      QWidget* parent);
-
-  QString text() const;
-};
-
-using JitEffectFactory = Process::EffectProcessFactory_T<JitEffectModel>;
-using LayerFactory = Process::EffectLayerFactory_T<
-    JitEffectModel,
-    Media::Effect::DefaultEffectItem,
-    JitEditDialog>;
 }
 
 namespace Execution
@@ -139,3 +124,6 @@ public:
 using JitEffectComponentFactory
     = Execution::ProcessComponentFactory_T<JitEffectComponent>;
 }
+
+PROPERTY_COMMAND_T(Jit, EditScript, JitEffectModel::p_script, "Edit C++ script")
+SCORE_COMMAND_DECL_T(Jit::EditScript)

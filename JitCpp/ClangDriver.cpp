@@ -1,4 +1,3 @@
-#include <score/tools/Todo.hpp>
 
 #include <QCryptographicHash>
 #include <QStandardPaths>
@@ -59,12 +58,13 @@ llvm::Expected<std::unique_ptr<llvm::Module>>
 ClangCC1Driver::compileTranslationUnit(
     const std::string& cpp,
     const std::vector<std::string>& flags,
+    CompilerOptions opts,
     llvm::LLVMContext& context)
 {
   std::string preproc = replaceExtension(cpp, "preproc.cpp");
 
   // Default flags
-  auto flags_vec = getClangCC1Args();
+  auto flags_vec = getClangCC1Args(opts);
   flags_vec.push_back("-main-file-name");
   flags_vec.push_back(cpp);
   flags_vec.push_back("-x");
@@ -152,7 +152,7 @@ ClangCC1Driver::compileTranslationUnit(
   return std::move(*module);
 }
 
-std::vector<std::string> ClangCC1Driver::getClangCC1Args()
+std::vector<std::string> ClangCC1Driver::getClangCC1Args(CompilerOptions opts)
 {
   std::vector<std::string> args;
   args.reserve(200);
@@ -162,7 +162,7 @@ std::vector<std::string> ClangCC1Driver::getClangCC1Args()
   args.push_back("-emit-llvm-uselists");
 
   populateIncludeDirs(args);
-  populateCompileOptions(args);
+  populateCompileOptions(args, opts);
   populateDefinitions(args);
 
   /*

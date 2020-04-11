@@ -21,10 +21,10 @@
 #include <QNetworkRequest>
 #include <QStandardPaths>
 #include <QTemporaryFile>
+#include <zipdownloader.hpp>
 
 #include <wobjectimpl.h>
 
-#include <miniz.c>
 W_OBJECT_IMPL(PluginSettings::PluginSettingsView)
 namespace PluginSettings
 {
@@ -63,62 +63,6 @@ bool make_folder(const QString& str)
   return d.mkpath(str);
 }
 
-std::vector<QString> unzip(const QByteArray& zipFile, const QString& path)
-{
-  std::vector<QString> files;
-
-  mz_zip_archive zip_archive;
-  memset(&zip_archive, 0, sizeof(zip_archive));
-
-  auto status = mz_zip_reader_init_mem(&zip_archive, zipFile.data(),
-  zipFile.size(), 0); if (!status) return files; int fileCount =
-  (int)mz_zip_reader_get_num_files(&zip_archive); if (fileCount == 0)
-  {
-    mz_zip_reader_end(&zip_archive);
-    return files;
-  }
-  mz_zip_archive_file_stat file_stat;
-  if (!mz_zip_reader_file_stat(&zip_archive, 0, &file_stat))
-  {
-    mz_zip_reader_end(&zip_archive);
-    return files;
-  }
-
-  // Get root folder
-  QString lastDir = "";
-  QString base
-      = slash_path(get_path(file_stat.m_filename)); // path delim on end
-
-  // Get and print information about each file in the archive.
-  for (int i = 0; i < fileCount; i++)
-  {
-    if (!mz_zip_reader_file_stat(&zip_archive, i, &file_stat))
-      continue;
-    if (mz_zip_reader_is_file_a_directory(&zip_archive, i))
-      continue; // skip directories for now
-    QString fileName
-        = relative_path(base, file_stat.m_filename); // make path relative
-    QString destFile = combine_path(path, fileName); // make full dest path
-    auto newDir = get_path(fileName);                // get the file's path
-    if (newDir != lastDir)
-    {
-      if (!make_folder(combine_path(path, newDir))) // creates the directory
-      {
-        return files;
-      }
-    }
-
-    if (mz_zip_reader_extract_to_file(&zip_archive, i, destFile.toUtf8(), 0))
-    {
-      files.emplace_back(destFile);
-    }
-  }
-
-  // Close the archive, freeing any resources it was using
-  mz_zip_reader_end(&zip_archive);
-
-  return files;
-}
 }
 
 PluginSettingsView::PluginSettingsView()
@@ -290,65 +234,54 @@ void PluginSettingsView::install()
     return;
 
   m_progress->setVisible(true);
-  auto dl = new score::FileDownloader{addon.source};
-  connect(
-      dl,
-      &score::FileDownloader::downloaded,
-      this,
-      [&, dl, addon](const QByteArray& arr) {
-        const auto addons_path = score::AppContext()
-                                     .settings<Library::Settings::Model>()
-                                     .getPath()
-                                 + "/Addons";
 
-        // Extract the downloaded zip data
-        auto res = zip_helper::unzip(arr, addons_path);
+  const QString addons_path{score::AppContext()
+                               .settings<Library::Settings::Model>()
+                               .getPath()
+                           + "/Addons"};
+  zdl::download_and_extract(
+        addon.source,
+        QFileInfo{addons_path}.absolutePath(),
+        [=] (const std::vector<QString>& res) {
+    m_progress->setHidden(true);
+    if(res.empty())
+      return;
+    // We want the extracted folder to have the name of the addon
+    {
+      QDir addons_dir{addons_path};
+      QFileInfo a_file(res[0]);
+      auto d = a_file.dir();
+      auto old_d = d;
+      while (d.cdUp() && !d.isRoot())
+      {
+        if (d == addons_dir)
+        {
+          addons_dir.rename(old_d.dirName(), addon.raw_name);
+          break;
+        }
+        old_d = d;
+      }
+    }
 
-        if(res.empty())
-        {
-          QMessageBox::warning(getWidget(), "Warning", "Could not extract" + addon.source.toString() + " in " + addons_path);
-          return;
-        }
-        // We want the extracted folder to have the name of the addon
-        {
-          QDir addons_dir{addons_path};
-          QFileInfo a_file(res[0]);
-          auto d = a_file.dir();
-          auto old_d = d;
-          while (d.cdUp() && !d.isRoot())
-          {
-            if (d == addons_dir)
-            {
-              addons_dir.rename(old_d.dirName(), addon.raw_name);
-              break;
-            }
-            old_d = d;
-          }
-        }
 
-        dl->deleteLater();
-        m_progress->setHidden(true);
+    QMessageBox::information(
+        m_widget,
+        tr("Addon downloaded"),
+        tr("The addon %1 has been succesfully installed in :\n"
+           "%2\n\n"
+           "It will be built and enabled shortly.\nCheck the message "
+           "console for errors if nothing happens.")
+            .arg(addon.name)
+            .arg(QFileInfo(addons_path).absoluteFilePath()));
 
-        if (res.size() > 0)
-        {
-          QMessageBox::information(
-              m_widget,
-              tr("Addon downloaded"),
-              tr("The addon %1 has been succesfully installed in :\n"
-                 "%2\n\n"
-                 "It will be built and enabled shortly.\nCheck the message "
-                 "console for errors if nothing happens.")
-                  .arg(addon.name)
-                  .arg(QFileInfo(addons_path).absoluteFilePath()));
-        }
-        else
-        {
-          QMessageBox::warning(
-              m_widget,
-              tr("Download failed"),
-              tr("The addon %1 could not be downloaded."));
-        }
-      });
+  },
+  [this] {
+    m_progress->setHidden(true);
+    QMessageBox::warning(
+        m_widget,
+        tr("Download failed"),
+        tr("The addon %1 could not be downloaded."));
+  });
 }
 
 }

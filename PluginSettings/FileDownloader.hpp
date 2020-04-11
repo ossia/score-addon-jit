@@ -5,7 +5,7 @@
 #include <QNetworkRequest>
 #include <QObject>
 
-#include <wobjectdefs.h>
+#include <verdigris>
 
 namespace score
 {

@@ -12,7 +12,7 @@
 #include <QImage>
 #include <QUrl>
 
-#include <wobjectdefs.h>
+#include <verdigris>
 
 namespace score
 {

@@ -18,7 +18,8 @@ struct Driver
 
   std::function<Fun_T> operator()(
       const std::string& sourceCode,
-      const std::vector<std::string>& flags)
+      const std::vector<std::string>& flags,
+      CompilerOptions opts)
   {
     auto t0 = std::chrono::high_resolution_clock::now();
 
@@ -28,10 +29,10 @@ struct Driver
 
     std::string cpp = *sourceFileName;
     auto filename = QFileInfo(QString::fromStdString(cpp)).fileName();
-    auto global_init = "_GLOBAL__sub_I_" + filename.replace('-', '_');
+    const QString global_init = "_GLOBAL__sub_I_" + filename.replace('-', '_');
 
     qDebug() << "Looking for: " << global_init;
-    auto module = jit.compile(cpp, flags, context);
+    auto module = jit.compile(cpp, flags, opts, context);
     {
       auto globals_init = jit.getFunction<void()>(global_init.toStdString());
       if (globals_init)

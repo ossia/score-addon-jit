@@ -42,7 +42,7 @@ ApplicationPlugin::ApplicationPlugin(const score::GUIApplicationContext& ctx)
 void ApplicationPlugin::rescanAddons()
 {
   const auto& libpath = context.settings<Library::Settings::Model>().getPath();
-  auto addons = libpath + "/Addons";
+  QString addons = libpath + "/Addons";
   m_addonsWatch.addPath(addons);
   QDirIterator it{addons,
                   QDir::Filter::Dirs | QDir::Filter::NoDotAndDotDot,
@@ -61,7 +61,7 @@ void ApplicationPlugin::rescanAddons()
 void ApplicationPlugin::rescanNodes()
 {
   const auto& libpath = context.settings<Library::Settings::Model>().getPath();
-  auto nodes = libpath + "/Nodes";
+  QString nodes = libpath + "/Nodes";
   m_nodesWatch.addPath(nodes);
 
   QDirIterator it{nodes,
@@ -114,7 +114,7 @@ void ApplicationPlugin::setupAddon(const QString& addon)
 
   const std::string id
       = json["key"].toString().remove(QChar('-')).toStdString();
-  m_compiler.submitJob(id, cpp_files, flags);
+  m_compiler.submitJob(id, cpp_files, flags, CompilerOptions{});
 }
 
 void ApplicationPlugin::setupNode(const QString& f)
@@ -148,7 +148,7 @@ void ApplicationPlugin::setupNode(const QString& f)
             )_");
 
       qDebug() << "Registering JIT node" << f;
-      m_compiler.submitJob(uuid.toStdString(), node.toStdString(), {});
+      m_compiler.submitJob(uuid.toStdString(), node.toStdString(), {}, CompilerOptions{});
     }
   }
 }

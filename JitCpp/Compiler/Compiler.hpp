@@ -92,9 +92,10 @@ public:
   auto compile(
       const std::string& cppCode,
       const std::vector<std::string>& flags,
+      CompilerOptions opts,
       llvm::LLVMContext& context)
   {
-    auto module = compileModule(cppCode, flags, context);
+    auto module = compileModule(cppCode, flags, opts, context);
     if (!module)
       throw Exception{module.takeError()};
 
@@ -107,9 +108,10 @@ public:
   llvm::Expected<std::unique_ptr<llvm::Module>> compileModule(
       const std::string& cppCode,
       const std::vector<std::string>& flags,
+      CompilerOptions opts,
       llvm::LLVMContext& context)
   {
-    return ClangDriver.compileTranslationUnit(cppCode, flags, context);
+    return ClangDriver.compileTranslationUnit(cppCode, flags, opts, context);
   }
 
   void submitModule(ModulePtr_t module)

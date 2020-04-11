@@ -1,10 +1,10 @@
 #pragma once
-#include <score/tools/Todo.hpp>
 
+#include <JitCpp/JitOptions.hpp>
 #include <QThread>
 
 #include <score_addon_jit_export.h>
-#include <wobjectdefs.h>
+#include <verdigris>
 
 namespace score
 {
@@ -24,9 +24,11 @@ public:
   void submitJob(
       const std::string& id,
       std::string cpp,
-      std::vector<std::string> flags) W_SIGNAL(submitJob, id, cpp, flags);
+      std::vector<std::string> flags,
+      CompilerOptions opts) W_SIGNAL(submitJob, id, cpp, flags, opts);
   void jobCompleted(score::Plugin_QtInterface* p) W_SIGNAL(jobCompleted, p);
-  void on_job(std::string id, std::string cpp, std::vector<std::string> flags);
+  void on_job(std::string id, std::string cpp, std::vector<std::string> flags,
+              CompilerOptions opts);
 
 private:
   QThread m_thread;
@@ -35,14 +37,13 @@ private:
 using FactoryFunction = std::function<void()>;
 using CustomCompiler = std::function<
     FactoryFunction(const std::string&, const std::vector<std::string>&)>;
-
-SCORE_ADDON_JIT_EXPORT
-CustomCompiler makeCustomCompiler(const std::string& function);
 }
 
 Q_DECLARE_METATYPE(std::string)
 W_REGISTER_ARGTYPE(std::string)
 Q_DECLARE_METATYPE(std::vector<std::string>)
 W_REGISTER_ARGTYPE(std::vector<std::string>)
+Q_DECLARE_METATYPE(Jit::CompilerOptions)
+W_REGISTER_ARGTYPE(Jit::CompilerOptions)
 Q_DECLARE_METATYPE(score::Plugin_QtInterface*)
 W_REGISTER_ARGTYPE(score::Plugin_QtInterface*)

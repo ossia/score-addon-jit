@@ -43,7 +43,7 @@ LocalPluginItemModel::LocalPluginItemModel(
     }
   };
 
-  const auto addons_path
+  const QString addons_path
       = ctx.settings<Library::Settings::Model>().getPath() + "/Addons";
   con(m_addonsWatch,
       &QFileSystemWatcher::directoryChanged,

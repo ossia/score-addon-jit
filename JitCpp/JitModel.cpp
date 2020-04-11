@@ -74,8 +74,12 @@ JitEffectModel::JitEffectModel(DataStream::Deserializer&& vis, QObject* parent)
 
 void JitEffectModel::setScript(const QString& txt)
 {
-  m_text = txt;
-  reload();
+  if(m_text != txt)
+  {
+    m_text = txt;
+    reload();
+    scriptChanged(txt);
+  }
 }
 
 void JitEffectModel::init() {}
@@ -88,64 +92,57 @@ QString JitEffectModel::prettyName() const noexcept
 struct inlet_vis
 {
   JitEffectModel& self;
-  Process::Inlet* operator()(const ossia::audio_port& p)
+  Process::Inlet* operator()(const ossia::audio_port& p) const noexcept
   {
-    auto i = new Process::Inlet{getStrongId(self.inlets()), &self};
-    i->type = Process::PortType::Audio;
+    auto i = new Process::AudioInlet{getStrongId(self.inlets()), &self};
     return i;
   }
 
-  Process::Inlet* operator()(const ossia::midi_port& p)
+  Process::Inlet* operator()(const ossia::midi_port& p) const noexcept
   {
-    auto i = new Process::Inlet{getStrongId(self.inlets()), &self};
-    i->type = Process::PortType::Midi;
+    auto i = new Process::MidiInlet{getStrongId(self.inlets()), &self};
     return i;
   }
 
-  Process::Inlet* operator()(const ossia::value_port& p)
+  Process::Inlet* operator()(const ossia::value_port& p) const noexcept
   {
     if(!p.is_event)
     {
-      auto i = new Process::Inlet{getStrongId(self.inlets()), &self};
-      i->type = Process::PortType::Message;
+      auto i = new Process::ValueInlet{getStrongId(self.inlets()), &self};
       return i;
     }
     else
     {
       auto i = new Process::ControlInlet{getStrongId(self.inlets()), &self};
-      i->type = Process::PortType::Message;
       i->setDomain(State::Domain{p.domain});
       return i;
     }
   }
 
-  Process::Inlet* operator()() { return nullptr; }
+  Process::Inlet* operator()() const noexcept { return nullptr; }
 };
 
 struct outlet_vis
 {
   JitEffectModel& self;
-  Process::Outlet* operator()(const ossia::audio_port& p)
+  Process::Outlet* operator()(const ossia::audio_port& p) const noexcept
   {
-    auto i = new Process::Outlet{getStrongId(self.outlets()), &self};
-    i->type = Process::PortType::Audio;
+    auto i = new Process::AudioOutlet{getStrongId(self.outlets()), &self};
     return i;
   }
 
-  Process::Outlet* operator()(const ossia::midi_port& p)
+  Process::Outlet* operator()(const ossia::midi_port& p) const noexcept
   {
-    auto i = new Process::Outlet{getStrongId(self.outlets()), &self};
-    i->type = Process::PortType::Midi;
+    auto i = new Process::MidiOutlet{getStrongId(self.outlets()), &self};
     return i;
   }
 
-  Process::Outlet* operator()(const ossia::value_port& p)
+  Process::Outlet* operator()(const ossia::value_port& p) const noexcept
   {
-    auto i = new Process::Outlet{getStrongId(self.outlets()), &self};
-    i->type = Process::PortType::Message;
+    auto i = new Process::ValueOutlet{getStrongId(self.outlets()), &self};
     return i;
   }
-  Process::Outlet* operator()() { return nullptr; }
+  Process::Outlet* operator()() const noexcept { return nullptr; }
 };
 
 void JitEffectModel::reload()
@@ -167,7 +164,7 @@ void JitEffectModel::reload()
 
   try
   {
-    jit_factory = (*m_compiler)(fx_text.toStdString(), {});
+    jit_factory = (*m_compiler)(fx_text.toStdString(), {}, CompilerOptions{false});
 
     if (!jit_factory)
       return;
@@ -197,70 +194,28 @@ void JitEffectModel::reload()
   m_inlets.clear();
   m_outlets.clear();
 
-  for (ossia::inlet* port : jit_object->inputs())
+  for (ossia::inlet* port : jit_object->root_inputs())
   {
-    if (auto inl = ossia::apply(inlet_vis{*this}, port->data))
+    if (auto inl = port->visit(inlet_vis{*this}))
     {
       m_inlets.push_back(inl);
     }
   }
-  for (ossia::outlet* port : jit_object->outputs())
+  for (ossia::outlet* port : jit_object->root_outputs())
   {
-    if (auto inl = ossia::apply(outlet_vis{*this}, port->data))
+    if (auto inl = port->visit(outlet_vis{*this}))
     {
       m_outlets.push_back(inl);
     }
   }
 
   if (!m_outlets.empty()
-      && m_outlets.front()->type == Process::PortType::Audio)
-    m_outlets.front()->setPropagate(true);
+      && m_outlets.front()->type() == Process::PortType::Audio)
+    safe_cast<Process::AudioOutlet*>(m_outlets.front())->setPropagate(true);
 
   inletsChanged();
   outletsChanged();
   changed();
-}
-
-JitEditDialog::JitEditDialog(
-    const JitEffectModel& fx,
-    const score::DocumentContext& ctx,
-    QWidget* parent)
-    : QDialog{parent}, m_effect{fx}
-{
-  this->setWindowFlag(Qt::WindowCloseButtonHint, false);
-  auto lay = new QVBoxLayout{this};
-  this->setLayout(lay);
-
-  m_textedit = new QPlainTextEdit{m_effect.script(), this};
-  m_error = new QPlainTextEdit{this};
-  m_error->setReadOnly(true);
-  m_error->setContextMenuPolicy(Qt::ContextMenuPolicy::CustomContextMenu);
-
-  lay->addWidget(m_textedit);
-  lay->addWidget(m_error);
-  auto bbox = new QDialogButtonBox{
-      QDialogButtonBox::Ok | QDialogButtonBox::Reset | QDialogButtonBox::Close,
-      this};
-  bbox->button(QDialogButtonBox::Ok)->setText(tr("Compile"));
-  bbox->button(QDialogButtonBox::Reset)->setText(tr("Clear log"));
-  connect(
-      bbox->button(QDialogButtonBox::Reset), &QPushButton::clicked, this, [=] {
-        m_error->clear();
-      });
-  lay->addWidget(bbox);
-  connect(bbox, &QDialogButtonBox::accepted, this, [&] {
-    CommandDispatcher<>{ctx.commandStack}.submit(new EditScript{fx, text()});
-  });
-  connect(bbox, &QDialogButtonBox::rejected, this, &QDialog::reject);
-
-  con(fx, &JitEffectModel::errorMessage, this, [=](const QString& txt) {
-    m_error->setPlainText(txt);
-  });
-}
-
-QString JitEditDialog::text() const
-{
-  return m_textedit->document()->toPlainText();
 }
 
 }
@@ -330,11 +285,10 @@ struct foo : ossia::graph_node {
    m_outlets.push_back(make_outlet<value_port>());
  }
 
- void run(ossia::token_request t, ossia::exec_state_facade) noexcept override
+ void run(const ossia::token_request& t, ossia::exec_state_facade) noexcept override
  {
-   std::cerr << " oh wow " << t.date.impl << std::endl;
-   auto& in  = *m_inlets[0]->data.target<ossia::value_port>();
-   auto& out = *m_outlets[0]->data.target<ossia::value_port>();
+   auto& in  = *m_inlets[0]->target<ossia::value_port>();
+   auto& out = *m_outlets[0]->target<ossia::value_port>();
 
    for(auto& val : in.get_data())
    {
@@ -382,13 +336,13 @@ Execution::JitEffectComponent::JitEffectComponent(
           if(!inlet)
             continue;
 
-          auto inl = node->inputs()[i];
-          inl->data.target<ossia::value_port>()->write_value(inlet->value(), {});
+          auto inl = node->root_inputs()[i];
+          inl->target<ossia::value_port>()->write_value(inlet->value(), {});
           connect(inlet, &Process::ControlInlet::valueChanged,
                   this, [this, inl] (const ossia::value& v) {
 
             system().executionQueue.enqueue([inl, val = v]() mutable {
-              inl->data.target<ossia::value_port>()->write_value(
+              inl->target<ossia::value_port>()->write_value(
                   std::move(val), 1);
             });
 

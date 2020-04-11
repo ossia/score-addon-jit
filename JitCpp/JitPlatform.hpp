@@ -25,8 +25,11 @@
 #define __SANITIZE_ADDRESS__ 1
 #endif
 #endif
+#include <JitCpp/JitOptions.hpp>
 namespace Jit
 {
+
+
 #define SCORE_DEPLOYMENT_BUILD 1
 static inline std::string locateSDK()
 {
@@ -72,14 +75,27 @@ static inline std::string locateSDK()
 #endif
 }
 
-static inline void populateCompileOptions(std::vector<std::string>& args)
+static inline void populateCompileOptions(std::vector<std::string>& args, CompilerOptions opts)
 {
   args.push_back("-triple");
   args.push_back(llvm::sys::getDefaultTargetTriple());
   args.push_back("-target-cpu");
   args.push_back(llvm::sys::getHostCPUName().lower());
 
-  args.push_back("-std=c++1z");
+  {
+    llvm::StringMap<bool> HostFeatures;
+    if (llvm::sys::getHostCPUFeatures(HostFeatures))
+    {
+      for (const llvm::StringMapEntry<bool> &F : HostFeatures)
+      {
+        args.push_back("-target-feature");
+        args.push_back((F.second ? "+" : "-") + F.first().str());
+      }
+    }
+  }
+
+
+  args.push_back("-std=c++2a");
   args.push_back("-disable-free");
   args.push_back("-fdeprecated-macro");
   args.push_back("-fmath-errno");
@@ -91,10 +107,9 @@ static inline void populateCompileOptions(std::vector<std::string>& args)
   args.push_back("posix");
   args.push_back("-masm-verbose");
   args.push_back("-mconstructor-aliases");
-  args.push_back("-munwind-tables");
 
-  args.push_back("-dwarf-column-info");
-  args.push_back("-debugger-tuning=gdb");
+  // args.push_back("-dwarf-column-info");
+  // args.push_back("-debugger-tuning=gdb");
 
   args.push_back("-fno-use-cxa-atexit");
 
@@ -151,17 +166,24 @@ static inline void populateCompileOptions(std::vector<std::string>& args)
   args.push_back("-fno-assume-sane-operator-new");
   args.push_back("-stack-protector");
   args.push_back("0");
-  args.push_back("-fcxx-exceptions");
-  args.push_back("-fexceptions");
-  args.push_back("-faddrsig");
+  if(opts.NoExceptions)
+  {
+    args.push_back("-fno-rtti");
+  }
+  else
+  {
+    args.push_back("-munwind-tables");
+    args.push_back("-fcxx-exceptions");
+    args.push_back("-fexceptions");
 #if defined(_WIN32)
-  args.push_back("-fseh-exceptions");
+    args.push_back("-fseh-exceptions");
 #endif
+  }
+  args.push_back("-faddrsig");
 
   args.push_back("-momit-leaf-frame-pointer");
   args.push_back("-vectorize-loops");
   args.push_back("-vectorize-slp");
-
 
 }
 
