@@ -181,7 +181,7 @@ static inline void populateCompileOptions(std::vector<std::string>& args, Compil
   }
   args.push_back("-faddrsig");
 
-  args.push_back("-momit-leaf-frame-pointer");
+  // args.push_back("-momit-leaf-frame-pointer");
   args.push_back("-vectorize-loops");
   args.push_back("-vectorize-slp");
 

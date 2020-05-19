@@ -2,6 +2,7 @@
 #include <QCryptographicHash>
 #include <QStandardPaths>
 
+#undef RESET // defined by verdigris
 #include <JitCpp/ClangDriver.hpp>
 
 #include <sstream>
@@ -61,6 +62,8 @@ ClangCC1Driver::compileTranslationUnit(
     CompilerOptions opts,
     llvm::LLVMContext& context)
 {
+  std::string bitcodeFile;
+
   std::string preproc = replaceExtension(cpp, "preproc.cpp");
 
   // Default flags
@@ -79,7 +82,7 @@ ClangCC1Driver::compileTranslationUnit(
   flags_vec.push_back("-o");
   flags_vec.push_back(preproc);
   flags_vec.push_back(cpp);
-
+/*
   {
     Timer t;
     llvm::Error err = compileCppToBitcodeFile(flags_vec);
@@ -89,10 +92,9 @@ ClangCC1Driver::compileTranslationUnit(
 
   const auto cache_dir = bitcodeDatabase();
 
-  std::string bitcodeFile;
   auto preproc_hash = hashFile(QString::fromStdString(preproc));
   {
-    if (0 && cache_dir && cache_dir->exists())
+    if (cache_dir && cache_dir->exists())
     {
       QDirIterator it(*cache_dir);
       while (it.hasNext())
@@ -107,7 +109,7 @@ ClangCC1Driver::compileTranslationUnit(
       }
     }
   }
-
+*/
   // If there isn't a matching bitcode file, do the actual C++ -> bitcode
   // compilation
   if (bitcodeFile.empty())
@@ -123,6 +125,7 @@ ClangCC1Driver::compileTranslationUnit(
     if (err)
       return std::move(err);
 
+    /* TODO FIX CACHE
     if (cache_dir && cache_dir->exists())
     {
       QFile f(QString::fromStdString(bitcodeFile));
@@ -133,6 +136,7 @@ ClangCC1Driver::compileTranslationUnit(
                  << " : failed !";
       }
     }
+    */
   }
 
   // Load the bitcode

@@ -77,7 +77,7 @@ public:
 
   TexgenFactory factory;
 
-  void errorMessage(const QString& e) W_SIGNAL(errorMessage, e);
+  void errorMessage(int line, const QString& e) W_SIGNAL(errorMessage, line, e);
 
   PROPERTY(QString, script READ script WRITE setScript NOTIFY scriptChanged)
 private:
@@ -104,7 +104,7 @@ namespace Jit
 using TexgenEffectFactory = Process::EffectProcessFactory_T<TexgenModel>;
 using TexgenLayerFactory = Process::EffectLayerFactory_T<
     TexgenModel,
-    Media::Effect::DefaultEffectItem,
+    Process::DefaultEffectItem,
     Process::ProcessScriptEditDialog<TexgenModel, TexgenModel::p_script>
 >;
 

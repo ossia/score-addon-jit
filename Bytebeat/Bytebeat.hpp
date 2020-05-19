@@ -75,7 +75,7 @@ public:
 
   BytebeatFactory factory;
 
-  void errorMessage(const QString& e) W_SIGNAL(errorMessage, e);
+  void errorMessage(int line, const QString& e) W_SIGNAL(errorMessage, line, e);
 
   PROPERTY(QString, script READ script WRITE setScript NOTIFY scriptChanged)
 private:
@@ -102,7 +102,7 @@ namespace Jit
 using BytebeatEffectFactory = Process::EffectProcessFactory_T<BytebeatModel>;
 using BytebeatLayerFactory = Process::EffectLayerFactory_T<
     BytebeatModel,
-    Media::Effect::DefaultEffectItem,
+    Process::DefaultEffectItem,
     Process::ProcessScriptEditDialog<BytebeatModel, BytebeatModel::p_script>
 >;
 

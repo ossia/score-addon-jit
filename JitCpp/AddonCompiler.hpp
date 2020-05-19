@@ -5,7 +5,7 @@
 
 #include <score_addon_jit_export.h>
 #include <verdigris>
-
+#undef RESET
 namespace score
 {
 class Plugin_QtInterface;

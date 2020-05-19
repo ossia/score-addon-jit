@@ -5,7 +5,6 @@ project(score_addon_jit LANGUAGES CXX)
 
 # General initialization
 score_common_setup()
-find_package(Qt5 5.9 REQUIRED COMPONENTS QuickWidgets)
 
 # Source files
 set(HDRS
@@ -57,7 +56,7 @@ endif()
 find_package(LLVM REQUIRED PATHS ${LLVM_DIR})
 find_package(Clang REQUIRED PATHS ${LLVM_DIR}/../Clang)
 find_package(Polly PATHS ${LLVM_DIR}/../Polly)
-if(LLVM_VERSION MATCHES "7.*" OR LLVM_VERSION MATCHES "8.*" OR LLVM_VERSION MATCHES "9.*")
+if(LLVM_VERSION MATCHES "7.*" OR LLVM_VERSION MATCHES "8.*" OR LLVM_VERSION MATCHES "9.*" OR LLVM_VERSION MATCHES "10.*")
   message("-- LLVM version: ${LLVM_VERSION}")
 else()
   message(FATAL_ERROR "LLVM Version incompatible")
@@ -85,8 +84,12 @@ target_compile_definitions(score_addon_jit
     SCORE_ROOT_BINARY_DIR="${SCORE_ROOT_BINARY_DIR}"
 )
 
+if(${CMAKE_CXX_STANDARD} MATCHES "20")
+  target_compile_options(score_addon_jit PRIVATE -std=c++17)
+endif()
 # Clang dependencies
-set(CLANG_LIBS
+if(LLVM_VERSION VERSION_LESS "10.*")
+  set(CLANG_LIBS
     clangARCMigrate
     clangBasic
     clangCodeGen
@@ -109,7 +112,13 @@ set(CLANG_LIBS
     clangLex
     clangCrossTU
     clangIndex
-)
+  )
+else()
+  set(CLANG_LIBS
+      clang
+      clang-cpp
+  )
+endif()
 
 if(Polly_FOUND)
   set(POLLY_LIBS Polly PollyISL PollyPPCG)
@@ -145,7 +154,7 @@ endif()
 score_generate_command_list_file(${PROJECT_NAME} "${HDRS}")
 
 # Link
-target_link_libraries(${PROJECT_NAME} PUBLIC score_lib_process score_plugin_library Qt5::QuickWidgets)
+target_link_libraries(${PROJECT_NAME} PUBLIC score_lib_process score_plugin_library)
 
 # Target-specific options
 setup_score_plugin(${PROJECT_NAME})

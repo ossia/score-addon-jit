@@ -171,12 +171,12 @@ void JitEffectModel::reload()
   }
   catch (const std::exception& e)
   {
-    errorMessage(e.what());
+    errorMessage(0, e.what());
     return;
   }
   catch (...)
   {
-    errorMessage("JIT error");
+    errorMessage(0, "JIT error");
     return;
   }
 
@@ -242,17 +242,17 @@ void DataStreamWriter::write(Jit::JitEffectModel& eff)
 }
 
 template <>
-void JSONObjectReader::read(const Jit::JitEffectModel& eff)
+void JSONReader::read(const Jit::JitEffectModel& eff)
 {
-  readPorts(obj, eff.m_inlets, eff.m_outlets);
+  readPorts(*this, eff.m_inlets, eff.m_outlets);
   obj["Text"] = eff.script();
 }
 
 template <>
-void JSONObjectWriter::write(Jit::JitEffectModel& eff)
+void JSONWriter::write(Jit::JitEffectModel& eff)
 {
   writePorts(
-      obj,
+      *this,
       components.interfaces<Process::PortFactoryList>(),
       eff.m_inlets,
       eff.m_outlets,

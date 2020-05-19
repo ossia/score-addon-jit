@@ -6,7 +6,7 @@
 #include <QApplication>
 #include <QDir>
 #include <QDirIterator>
-#include <QQuickWidget>
+//#include <QQuickWidget>
 #include <QThread>
 
 #include <JitCpp/ApplicationPlugin.hpp>
@@ -85,7 +85,7 @@ void ApplicationPlugin::initialize()
   rescanAddons();
 
   // If we don't do this, the linker will strip the whole Qt5QuickWidgets lib altogether:
-  delete new QQuickWidget;
+  // delete new QQuickWidget;
 }
 
 void ApplicationPlugin::registerAddon(score::Plugin_QtInterface* p)

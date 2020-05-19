@@ -1,4 +1,5 @@
 #pragma once
+#undef RESET
 #include <llvm/Bitcode/BitcodeReader.h>
 #include <llvm/IR/Module.h>
 #include <llvm/Support/Error.h>

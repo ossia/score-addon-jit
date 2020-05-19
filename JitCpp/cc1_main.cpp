@@ -209,8 +209,8 @@ int cc1_main(
 
   // Register the support for object-file-wrapped Clang modules.
   auto PCHOps = Clang->getPCHContainerOperations();
-  PCHOps->registerWriter(llvm::make_unique<ObjectFilePCHContainerWriter>());
-  PCHOps->registerReader(llvm::make_unique<ObjectFilePCHContainerReader>());
+  PCHOps->registerWriter(std::make_unique<ObjectFilePCHContainerWriter>());
+  PCHOps->registerReader(std::make_unique<ObjectFilePCHContainerReader>());
 
   // Initialize targets first, so that --version shows registered targets.
   llvm::InitializeAllTargets();
@@ -228,8 +228,14 @@ int cc1_main(
   IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions();
   TextDiagnosticBuffer* DiagsBuffer = new TextDiagnosticBuffer;
   DiagnosticsEngine Diags(DiagID, &*DiagOpts, DiagsBuffer);
+
+#if LLVM_VERSION_MAJOR < 10
   bool Success = CompilerInvocation::CreateFromArgs(
       Clang->getInvocation(), Argv.begin(), Argv.end(), Diags);
+#else
+  bool Success = CompilerInvocation::CreateFromArgs(
+      Clang->getInvocation(), Argv, Diags);
+#endif
 
   // Infer the builtin include path if unspecified.
   if (Clang->getHeaderSearchOpts().UseBuiltinIncludes

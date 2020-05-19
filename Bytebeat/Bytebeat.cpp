@@ -53,7 +53,10 @@ BytebeatModel::BytebeatModel(
   audio_out->setPropagate(true);
   this->m_outlets.push_back(audio_out);
   init();
-  setScript(jitProgram);
+  if(jitProgram.isEmpty())
+    setScript(Process::EffectProcessFactory_T<Jit::BytebeatModel>{}.customConstructionData());
+  else
+    setScript(jitProgram);
 }
 
 BytebeatModel::~BytebeatModel() {}
@@ -130,12 +133,12 @@ void BytebeatModel::reload()
   }
   catch (const std::exception& e)
   {
-    errorMessage(e.what());
+    errorMessage(0, e.what());
     return;
   }
   catch (...)
   {
-    errorMessage("JIT error");
+    errorMessage(0, "JIT error");
     return;
   }
 
@@ -232,17 +235,17 @@ void DataStreamWriter::write(Jit::BytebeatModel& eff)
 }
 
 template <>
-void JSONObjectReader::read(const Jit::BytebeatModel& eff)
+void JSONReader::read(const Jit::BytebeatModel& eff)
 {
-  readPorts(obj, eff.m_inlets, eff.m_outlets);
+  readPorts(*this, eff.m_inlets, eff.m_outlets);
   obj["Text"] = eff.script();
 }
 
 template <>
-void JSONObjectWriter::write(Jit::BytebeatModel& eff)
+void JSONWriter::write(Jit::BytebeatModel& eff)
 {
   writePorts(
-      obj,
+      *this,
       components.interfaces<Process::PortFactoryList>(),
       eff.m_inlets,
       eff.m_outlets,

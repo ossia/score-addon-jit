@@ -76,7 +76,7 @@ public:
 
   NodeFactory factory;
 
-  void errorMessage(const QString& e) W_SIGNAL(errorMessage, e);
+  void errorMessage(int line, const QString& e) W_SIGNAL(errorMessage, line, e);
   PROPERTY(QString, script READ script WRITE setScript NOTIFY scriptChanged)
   private:
   void init();
@@ -87,7 +87,7 @@ public:
 using JitEffectFactory = Process::EffectProcessFactory_T<Jit::JitEffectModel>;
 using LayerFactory = Process::EffectLayerFactory_T<
     JitEffectModel,
-    Media::Effect::DefaultEffectItem,
+    Process::DefaultEffectItem,
     Process::ProcessScriptEditDialog<JitEffectModel, JitEffectModel::p_script>
 >;
 }
