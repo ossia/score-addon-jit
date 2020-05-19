@@ -143,7 +143,7 @@ public:
   texgen_node(Gfx::GfxExecutionAction& ctx)
       : gfx_exec_node{ctx}
   {
-    root_outputs().push_back(new ossia::value_outlet);
+    root_outputs().push_back(new ossia::texture_outlet);
 
     auto n = std::make_unique<TexgenNode>();
     gfxNode = n.get();

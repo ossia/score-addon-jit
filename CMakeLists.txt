@@ -3,6 +3,8 @@ project(score_addon_jit LANGUAGES CXX)
 # Based on the code in
 # https://github.com/weliveindetail/JitFromScratch
 
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED 17)
 # General initialization
 score_common_setup()
 
@@ -84,9 +86,7 @@ target_compile_definitions(score_addon_jit
     SCORE_ROOT_BINARY_DIR="${SCORE_ROOT_BINARY_DIR}"
 )
 
-if(${CMAKE_CXX_STANDARD} MATCHES "20")
-  target_compile_options(score_addon_jit PRIVATE -std=c++17)
-endif()
+target_compile_options(score_addon_jit PRIVATE -std=c++17)
 # Clang dependencies
 if(LLVM_VERSION VERSION_LESS "10.*")
   set(CLANG_LIBS
