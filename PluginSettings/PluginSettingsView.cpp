@@ -16,6 +16,8 @@
 #include <QGridLayout>
 #include <QHeaderView>
 #include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonArray>
 #include <QMessageBox>
 #include <QNetworkReply>
 #include <QNetworkRequest>
@@ -23,6 +25,7 @@
 #include <QTemporaryFile>
 #include <zipdownloader.hpp>
 
+#include <QJsonDocument>
 #include <wobjectimpl.h>
 
 W_OBJECT_IMPL(PluginSettings::PluginSettingsView)
@@ -213,8 +216,8 @@ void PluginSettingsView::on_message(QNetworkReply* rep)
     qDebug() << res;
     m_progress->setHidden(true);
   }
-
   rep->deleteLater();
+
 }
 
 void PluginSettingsView::install()

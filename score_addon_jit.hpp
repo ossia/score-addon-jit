@@ -35,4 +35,6 @@ private:
 
   score::GUIApplicationPlugin*
   make_guiApplicationPlugin(const score::GUIApplicationContext& app) override;
+
+  std::vector<score::PluginKey> required() const override;
 };

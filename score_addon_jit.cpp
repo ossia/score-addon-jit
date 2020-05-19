@@ -2,6 +2,9 @@
 
 #include <PluginSettings/PluginSettings.hpp>
 #include <Process/Execution/ProcessComponent.hpp>
+#include <score_plugin_engine.hpp>
+#include <score_plugin_library.hpp>
+#include <score_addon_gfx.hpp>
 
 #include <score/plugins/FactorySetup.hpp>
 
@@ -76,6 +79,11 @@ score::GUIApplicationPlugin* score_addon_jit::make_guiApplicationPlugin(
     const score::GUIApplicationContext& app)
 {
   return new Jit::ApplicationPlugin{app};
+}
+
+std::vector<score::PluginKey> score_addon_jit::required() const
+{
+  return {score_plugin_engine::static_key(), score_addon_gfx::static_key(), score_plugin_library::static_key()};
 }
 
 #include <score/plugins/PluginInstances.hpp>
