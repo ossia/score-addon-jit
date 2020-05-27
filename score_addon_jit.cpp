@@ -4,7 +4,6 @@
 #include <Process/Execution/ProcessComponent.hpp>
 #include <score_plugin_engine.hpp>
 #include <score_plugin_library.hpp>
-#include <score_addon_gfx.hpp>
 
 #include <score/plugins/FactorySetup.hpp>
 
@@ -17,6 +16,9 @@
 #include <llvm/Support/Signals.h>
 #include <llvm/Support/TargetSelect.h>
 #include <score_addon_jit_commands_files.hpp>
+#if defined(SCORE_JIT_HAS_TEXGEN)
+#include <score_addon_gfx.hpp>
+#endif
 score_addon_jit::score_addon_jit()
 {
   using namespace llvm;
@@ -83,7 +85,11 @@ score::GUIApplicationPlugin* score_addon_jit::make_guiApplicationPlugin(
 
 std::vector<score::PluginKey> score_addon_jit::required() const
 {
-  return {score_plugin_engine::static_key(), score_addon_gfx::static_key(), score_plugin_library::static_key()};
+  return {score_plugin_engine::static_key()
+    #if defined(SCORE_JIT_HAS_TEXGEN)
+        , score_addon_gfx::static_key()
+    #endif
+        , score_plugin_library::static_key()};
 }
 
 #include <score/plugins/PluginInstances.hpp>

@@ -127,6 +127,9 @@ endif()
 llvm_map_components_to_libnames(LLVM_LIBS
   all
 )
+if("${LLVM_LIBS}" STREQUAL "")
+  set(LLVM_LIBS LLVM)
+endif()
 
 list(FIND LLVM_LIBS LLVM LLVM_HAS_SHARED_LIBS)
 if("${LLVM_HAS_SHARED_LIBS}" GREATER 0)
@@ -140,6 +143,7 @@ if(TARGET score_plugin_media)
     set(LLVM_LIBS LLVM)
   endif()
 endif()
+
 if(WIN32)
   list(REMOVE_ITEM LLVM_LIBS LTO)
   list(REMOVE_ITEM LLVM_LIBS OptRemarks)
@@ -154,7 +158,7 @@ endif()
 score_generate_command_list_file(${PROJECT_NAME} "${HDRS}")
 
 # Link
-target_link_libraries(${PROJECT_NAME} PUBLIC score_lib_process score_plugin_library)
+target_link_libraries(${PROJECT_NAME} PUBLIC score_lib_process score_plugin_library score_plugin_engine)
 
 # Target-specific options
 setup_score_plugin(${PROJECT_NAME})

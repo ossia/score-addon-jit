@@ -23,7 +23,7 @@ namespace PluginSettings
 
 struct RemoteAddon
 {
-  static ossia::optional<RemoteAddon>
+  static std::optional<RemoteAddon>
   fromJson(const QJsonObject& obj) noexcept;
 
   QUrl source;

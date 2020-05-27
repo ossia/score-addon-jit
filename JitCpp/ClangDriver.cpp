@@ -24,7 +24,7 @@ ClangCC1Driver::~ClangCC1Driver()
   //  D();
 }
 
-ossia::optional<QDir> ClangCC1Driver::bitcodeDatabase()
+std::optional<QDir> ClangCC1Driver::bitcodeDatabase()
 {
   auto caches
       = QStandardPaths::standardLocations(QStandardPaths::CacheLocation);
@@ -34,7 +34,7 @@ ossia::optional<QDir> ClangCC1Driver::bitcodeDatabase()
     caches
         = QStandardPaths::standardLocations(QStandardPaths::AppDataLocation);
   if (caches.empty())
-    return ossia::none;
+    return std::nullopt;
 
   QDir dir{caches.front() + "/score-jit"};
   if (!dir.exists())

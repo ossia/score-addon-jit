@@ -14,7 +14,7 @@ public:
   ClangCC1Driver() = default;
   ~ClangCC1Driver();
 
-  static ossia::optional<QDir> bitcodeDatabase();
+  static std::optional<QDir> bitcodeDatabase();
 
   llvm::Expected<std::unique_ptr<llvm::Module>> compileTranslationUnit(
       const std::string& cppCode,

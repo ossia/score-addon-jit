@@ -230,35 +230,36 @@ void DataStreamReader::read(const Jit::JitEffectModel& eff)
 template <>
 void DataStreamWriter::write(Jit::JitEffectModel& eff)
 {
+  m_stream >> eff.m_text;
+  eff.reload();
+
   writePorts(
       *this,
       components.interfaces<Process::PortFactoryList>(),
       eff.m_inlets,
       eff.m_outlets,
       &eff);
-
-  m_stream >> eff.m_text;
-  eff.reload();
 }
 
 template <>
 void JSONReader::read(const Jit::JitEffectModel& eff)
 {
-  readPorts(*this, eff.m_inlets, eff.m_outlets);
   obj["Text"] = eff.script();
+  readPorts(*this, eff.m_inlets, eff.m_outlets);
 }
 
 template <>
 void JSONWriter::write(Jit::JitEffectModel& eff)
 {
+  eff.m_text = obj["Text"].toString();
+  eff.reload();
+
   writePorts(
       *this,
       components.interfaces<Process::PortFactoryList>(),
       eff.m_inlets,
       eff.m_outlets,
       &eff);
-  eff.m_text = obj["Text"].toString();
-  eff.reload();
 }
 
 namespace Process

@@ -199,42 +199,42 @@ TexgenExecutor::~TexgenExecutor() {}
 template <>
 void DataStreamReader::read(const Jit::TexgenModel& eff)
 {
-  readPorts(*this, eff.m_inlets, eff.m_outlets);
   m_stream << eff.m_text;
+  readPorts(*this, eff.m_inlets, eff.m_outlets);
 }
 
 template <>
 void DataStreamWriter::write(Jit::TexgenModel& eff)
 {
+  m_stream >> eff.m_text;
+  eff.reload();
+
   writePorts(
       *this,
       components.interfaces<Process::PortFactoryList>(),
       eff.m_inlets,
       eff.m_outlets,
       &eff);
-
-  m_stream >> eff.m_text;
-  eff.reload();
 }
 
 template <>
 void JSONReader::read(const Jit::TexgenModel& eff)
 {
-  readPorts(*this, eff.m_inlets, eff.m_outlets);
   obj["Text"] = eff.script();
+  readPorts(*this, eff.m_inlets, eff.m_outlets);
 }
 
 template <>
 void JSONWriter::write(Jit::TexgenModel& eff)
 {
+  eff.m_text = obj["Text"].toString();
+  eff.reload();
   writePorts(
       *this,
       components.interfaces<Process::PortFactoryList>(),
       eff.m_inlets,
       eff.m_outlets,
       &eff);
-  eff.m_text = obj["Text"].toString();
-  eff.reload();
 }
 
 namespace Process

@@ -281,7 +281,7 @@ void RemotePluginItemModel::clear()
   endResetModel();
 }
 
-ossia::optional<RemoteAddon>
+std::optional<RemoteAddon>
 RemoteAddon::fromJson(const QJsonObject& obj) noexcept
 {
   RemoteAddon add;
@@ -313,7 +313,7 @@ RemoteAddon::fromJson(const QJsonObject& obj) noexcept
 
   if (add.key.impl().is_nil() || add.name.isEmpty())
   {
-    return ossia::none;
+    return std::nullopt;
   }
 
   return add;
