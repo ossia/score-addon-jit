@@ -216,7 +216,6 @@ static inline void populateDefinitions(std::vector<std::string>& args)
   args.push_back("-DSCORE_PLUGIN_DEVICEEXPLORER");
   args.push_back("-DSCORE_PLUGIN_ENGINE");
   args.push_back("-DSCORE_PLUGIN_LIBRARY");
-  args.push_back("-DSCORE_PLUGIN_LOOP");
   args.push_back("-DSCORE_PLUGIN_MAPPING");
   args.push_back("-DSCORE_PLUGIN_MEDIA");
   args.push_back("-DSCORE_PLUGIN_SCENARIO");
