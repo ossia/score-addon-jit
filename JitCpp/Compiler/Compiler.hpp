@@ -64,7 +64,7 @@ public:
       : DL(targetMachine.createDataLayout())
       , SymbolResolverPtr{llvm::orc::createLegacyLookupResolver(
             es,
-            [&](const std::string& name) {
+            [&](const llvm::StringRef& name) {
               if (auto res = findSymbolInJITedCode(name))
                 return res;
               return findSymbolInHostProcess(name);
@@ -146,13 +146,13 @@ public:
   }
 
 private:
-  llvm::JITSymbol findSymbolInJITedCode(std::string mangledName)
+  llvm::JITSymbol findSymbolInJITedCode(llvm::StringRef mangledName)
   {
     constexpr bool exportedSymbolsOnly = false;
     return CompileLayer.findSymbol(mangledName, exportedSymbolsOnly);
   }
 
-  llvm::JITSymbol findSymbolInHostProcess(std::string mangledName) const
+  llvm::JITSymbol findSymbolInHostProcess(llvm::StringRef mangledName) const
   {
     // Lookup function address in the host symbol table.
     if (llvm::JITTargetAddress addr
