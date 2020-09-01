@@ -72,6 +72,12 @@ JitEffectModel::JitEffectModel(DataStream::Deserializer&& vis, QObject* parent)
   init();
 }
 
+bool JitEffectModel::validate(const QString& txt) const noexcept
+{
+  SCORE_TODO;
+  return true;
+}
+
 void JitEffectModel::setScript(const QString& txt)
 {
   if(m_text != txt)

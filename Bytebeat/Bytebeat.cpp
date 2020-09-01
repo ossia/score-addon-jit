@@ -99,6 +99,12 @@ void BytebeatModel::setScript(const QString& txt)
   }
 }
 
+bool BytebeatModel::validate(const QString& txt) const noexcept
+{
+  SCORE_TODO;
+  return true;
+}
+
 void BytebeatModel::init() {}
 
 QString BytebeatModel::prettyName() const noexcept

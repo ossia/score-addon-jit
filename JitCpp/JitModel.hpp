@@ -62,6 +62,8 @@ public:
   JitEffectModel(DataStream::Deserializer&& vis, QObject* parent);
   JitEffectModel(JSONObject::Deserializer&& vis, QObject* parent);
 
+  bool validate(const QString& txt) const noexcept;
+
   const QString& script() const { return m_text; }
   void setScript(const QString& txt);
   void scriptChanged(const QString& txt) W_SIGNAL(scriptChanged, txt);

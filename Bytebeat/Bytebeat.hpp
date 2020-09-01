@@ -67,6 +67,8 @@ public:
 
   static constexpr bool hasExternalUI() noexcept { return true; }
 
+  bool validate(const QString& txt) const noexcept;
+
   QString prettyName() const noexcept override;
   void changed() W_SIGNAL(changed);
 

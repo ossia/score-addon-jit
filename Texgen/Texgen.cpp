@@ -95,6 +95,12 @@ QString TexgenModel::prettyName() const noexcept
   return "Texgen";
 }
 
+bool TexgenModel::validate(const QString& txt) const noexcept
+{
+  SCORE_TODO;
+  return true;
+}
+
 void TexgenModel::reload()
 {
   // FIXME dispos of them once unused at execution

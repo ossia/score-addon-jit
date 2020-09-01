@@ -63,6 +63,7 @@ public:
   TexgenModel(DataStream::Deserializer&& vis, QObject* parent);
   TexgenModel(JSONObject::Deserializer&& vis, QObject* parent);
 
+  bool validate(const QString& txt) const noexcept;
   const QString& script() const noexcept { return m_text; }
   void setScript(const QString& txt);
   void scriptChanged(const QString& txt) W_SIGNAL(scriptChanged, txt);
