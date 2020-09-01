@@ -10,6 +10,7 @@
 
 #include <llvm/Support/Host.h>
 #include <llvm/ADT/StringRef.h>
+#include <llvm/ADT/StringMap.h>
 #include <ciso646>
 #include <iostream>
 #include <string>
