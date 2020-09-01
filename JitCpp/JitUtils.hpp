@@ -4,6 +4,7 @@
 #include <llvm/IR/Module.h>
 #include <llvm/Support/Error.h>
 #include <llvm/Support/MemoryBuffer.h>
+#include <llvm/Support/FileSystem.h>
 
 #include <chrono>
 #include <iostream>
