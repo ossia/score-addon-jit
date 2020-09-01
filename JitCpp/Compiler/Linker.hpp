@@ -46,7 +46,7 @@ protected:
         return nullptr;
       if (!Finalized)
         return JITSymbol(
-            getSymbolMaterializer(Name), SymEntry->second.getFlags());
+            getSymbolMaterializer(Name.str()), SymEntry->second.getFlags());
       return JITSymbol(SymEntry->second);
     }
 
@@ -176,8 +176,11 @@ private:
     {
       for (auto& Symbol : Obj.getBinary()->symbols())
       {
-        if (Symbol.getFlags() & object::SymbolRef::SF_Undefined)
+        const llvm::Expected<uint32_t> flags = Symbol.getFlags();
+
+        if (!bool(flags) || (flags.get() & object::SymbolRef::SF_Undefined))
           continue;
+
         Expected<StringRef> SymbolName = Symbol.getName();
         // FIXME: Raise an error for bad symbols.
         std::cerr << "symbol: " << SymbolName.get().str() << std::endl;
