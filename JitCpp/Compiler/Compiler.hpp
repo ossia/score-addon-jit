@@ -149,14 +149,14 @@ private:
   llvm::JITSymbol findSymbolInJITedCode(llvm::StringRef mangledName)
   {
     constexpr bool exportedSymbolsOnly = false;
-    return CompileLayer.findSymbol(mangledName, exportedSymbolsOnly);
+    return CompileLayer.findSymbol(mangledName.str(), exportedSymbolsOnly);
   }
 
   llvm::JITSymbol findSymbolInHostProcess(llvm::StringRef mangledName) const
   {
     // Lookup function address in the host symbol table.
     if (llvm::JITTargetAddress addr
-        = llvm::RTDyldMemoryManager::getSymbolAddressInProcess(mangledName))
+        = llvm::RTDyldMemoryManager::getSymbolAddressInProcess(mangledName.str()))
       return llvm::JITSymbol(addr, llvm::JITSymbolFlags::Exported);
 
     return nullptr;
