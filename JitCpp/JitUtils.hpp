@@ -81,7 +81,7 @@ saveSourceFile(const std::string& content)
   llvm::raw_fd_ostream os(fd, shouldClose, unbuffered);
   os << content;
 
-  return name.str();
+  return name.str().str();
 }
 
 }
