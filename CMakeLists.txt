@@ -58,7 +58,13 @@ endif()
 find_package(LLVM REQUIRED PATHS ${LLVM_DIR})
 find_package(Clang REQUIRED PATHS ${LLVM_DIR}/../Clang)
 find_package(Polly PATHS ${LLVM_DIR}/../Polly)
-if(LLVM_VERSION MATCHES "7.*" OR LLVM_VERSION MATCHES "8.*" OR LLVM_VERSION MATCHES "9.*" OR LLVM_VERSION MATCHES "10.*")
+if(LLVM_VERSION MATCHES "7.*" OR 
+   LLVM_VERSION MATCHES "8.*" OR 
+   LLVM_VERSION MATCHES "9.*" OR 
+   LLVM_VERSION MATCHES "10.*" OR
+   LLVM_VERSION MATCHES "11.*" OR
+   LLVM_VERSION MATCHES "12.*"
+  )
   message("-- LLVM version: ${LLVM_VERSION}")
 else()
   message(FATAL_ERROR "LLVM Version incompatible")
