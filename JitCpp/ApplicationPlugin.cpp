@@ -6,6 +6,7 @@
 #include <QApplication>
 #include <QDir>
 #include <QDirIterator>
+#include <QDebug>
 //#include <QQuickWidget>
 #include <QThread>
 
