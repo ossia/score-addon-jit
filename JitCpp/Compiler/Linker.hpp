@@ -176,7 +176,7 @@ private:
     {
       for (auto& Symbol : Obj.getBinary()->symbols())
       {
-        const llvm::Expected<uint32_t> flags = Symbol.getFlags();
+        llvm::Expected<uint32_t> flags = Symbol.getFlags();
 
         if (!bool(flags) || (flags.get() & object::SymbolRef::SF_Undefined))
           continue;
