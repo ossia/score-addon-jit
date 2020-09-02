@@ -23,16 +23,6 @@
 #include <wobjectimpl.h>
 W_OBJECT_IMPL(Jit::JitEffectModel)
 
-// Undefine macros defined by Qt / Verdigris
-#undef READ
-#undef WRITE
-
-#if __has_include(<../tools/driver/cc1_main.cpp>)
-#include <../tools/driver/cc1_main.cpp>
-#else
-#include "cc1_main.cpp"
-#endif
-
 namespace Jit
 {
 

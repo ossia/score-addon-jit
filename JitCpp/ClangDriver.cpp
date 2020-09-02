@@ -1,17 +1,19 @@
+// Undefine macros defined by Qt / Verdigris
+#undef READ
+#undef WRITE
+#undef RESET
+
+#if __has_include(<../tools/driver/cc1_main.cpp>)
+#include <../tools/driver/cc1_main.cpp>
+#else
+#include "cc1_main.cpp"
+#endif
+
+#include <JitCpp/ClangDriver.hpp>
 
 #include <QCryptographicHash>
 #include <QStandardPaths>
-
-#undef RESET // defined by verdigris
-#include <JitCpp/ClangDriver.hpp>
-
 #include <sstream>
-
-extern int cc1_main(
-    llvm::ArrayRef<const char*> Argv,
-    const char* Argv0,
-    void* MainAddr,
-    clang::DiagnosticConsumer*);
 
 namespace Jit
 {

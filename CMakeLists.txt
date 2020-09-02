@@ -36,7 +36,6 @@ set(HDRS
 set(SRCS
     JitCpp/AddonCompiler.cpp
     JitCpp/JitModel.cpp
-    JitCpp/ClangDriver.cpp
     JitCpp/ApplicationPlugin.cpp
 
     Bytebeat/Bytebeat.cpp
@@ -47,6 +46,10 @@ set(SRCS
     PluginSettings/PluginItemModel.cpp
     PluginSettings/FileDownloader.cpp
     score_addon_jit.cpp
+
+    # Note: has to be last as it uses some macros that conflicts with Qt's
+    # which we have to #undef, which can break unity builds
+    JitCpp/ClangDriver.cpp
 )
 
 add_library(${PROJECT_NAME} ${SRCS} ${HDRS})
@@ -58,13 +61,8 @@ endif()
 find_package(LLVM REQUIRED PATHS ${LLVM_DIR})
 find_package(Clang REQUIRED PATHS ${LLVM_DIR}/../Clang)
 find_package(Polly PATHS ${LLVM_DIR}/../Polly)
-if(LLVM_VERSION MATCHES "7.*" OR 
-   LLVM_VERSION MATCHES "8.*" OR 
-   LLVM_VERSION MATCHES "9.*" OR 
-   LLVM_VERSION MATCHES "10.*" OR
-   LLVM_VERSION MATCHES "11.*" OR
-   LLVM_VERSION MATCHES "12.*"
-  )
+
+if(LLVM_VERSION VERSION_GREATER "7.0")
   message("-- LLVM version: ${LLVM_VERSION}")
 else()
   message(FATAL_ERROR "LLVM Version incompatible")
