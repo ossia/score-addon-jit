@@ -131,6 +131,11 @@ endif()
 llvm_map_components_to_libnames(LLVM_LIBS
   all
 )
+
+if("${LLVM_LIBS}" STREQUAL "")
+  set(LLVM_LIBS "${LLVM_AVAILABLE_LIBS}")
+endif()
+
 if("${LLVM_LIBS}" STREQUAL "")
   set(LLVM_LIBS LLVM)
 endif()
