@@ -92,7 +92,7 @@ target_compile_definitions(score_addon_jit
 
 target_compile_options(score_addon_jit PRIVATE -std=c++17)
 # Clang dependencies
-if(LLVM_VERSION VERSION_LESS "10.*")
+if(LLVM_VERSION VERSION_LESS "10.*" OR (UNIX AND NOT APPLE AND DEPLOYMENT_BUILD))
   set(CLANG_LIBS
     clangARCMigrate
     clangBasic
@@ -134,6 +134,9 @@ llvm_map_components_to_libnames(LLVM_LIBS
 
 if("${LLVM_LIBS}" STREQUAL "")
   set(LLVM_LIBS "${LLVM_AVAILABLE_LIBS}")
+  list(REMOVE_ITEM LLVM_LIBS LTO)
+  list(REMOVE_ITEM LLVM_LIBS OptRemarks)
+  list(REMOVE_ITEM LLVM_LIBS Remarks)
 endif()
 
 if("${LLVM_LIBS}" STREQUAL "")
