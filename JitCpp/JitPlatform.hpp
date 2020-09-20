@@ -100,13 +100,13 @@ static inline void populateCompileOptions(std::vector<std::string>& args, Compil
   args.push_back("-disable-free");
   args.push_back("-fdeprecated-macro");
   args.push_back("-fmath-errno");
-  args.push_back("-fuse-init-array");
+  // disappeared in clang 11 args.push_back("-fuse-init-array");
 
   // args.push_back("-mrelocation-model");
   // args.push_back("static");
   args.push_back("-mthread-model");
   args.push_back("posix");
-  args.push_back("-masm-verbose");
+  // disappeared in clang 11 args.push_back("-masm-verbose");
   args.push_back("-mconstructor-aliases");
 
   // args.push_back("-dwarf-column-info");

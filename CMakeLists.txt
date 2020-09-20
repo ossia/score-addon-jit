@@ -91,8 +91,9 @@ target_compile_definitions(score_addon_jit
 )
 
 target_compile_options(score_addon_jit PRIVATE -std=c++17)
+
 # Clang dependencies
-if(LLVM_VERSION VERSION_LESS "10.*" OR (UNIX AND NOT APPLE AND DEPLOYMENT_BUILD))
+if(LLVM_VERSION VERSION_LESS "10.*" OR (UNIX AND NOT APPLE AND DEPLOYMENT_BUILD) OR OSSIA_SDK)
   set(CLANG_LIBS
     clangARCMigrate
     clangBasic
