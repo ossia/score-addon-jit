@@ -7,6 +7,7 @@
 #include <QDebug>
 #include <QDir>
 #include <QDirIterator>
+#include <Library/LibrarySettings.hpp>
 
 #include <llvm/Support/Host.h>
 #include <llvm/ADT/StringRef.h>
@@ -34,6 +35,14 @@ namespace Jit
 #define SCORE_DEPLOYMENT_BUILD 1
 static inline std::string locateSDK()
 {
+  auto& ctx = score::AppContext().settings<Library::Settings::Model>();
+  auto path = ctx.getPath();
+
+  if(QString libPath = path + "/SDK/usr/include/c++"; QDir(libPath).exists())
+  {
+    return libPath.toStdString();
+  }
+
   auto appFolder = qApp->applicationDirPath();
 
 #if defined(SCORE_DEPLOYMENT_BUILD)
