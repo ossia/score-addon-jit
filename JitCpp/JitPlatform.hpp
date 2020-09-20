@@ -40,7 +40,7 @@ static inline std::string locateSDK()
 
   if(QString libPath = path + "/SDK/usr/include/c++"; QDir(libPath).exists())
   {
-    return libPath.toStdString();
+    return QString(path + "/SDK/usr").toStdString();
   }
 
   auto appFolder = qApp->applicationDirPath();
