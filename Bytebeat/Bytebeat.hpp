@@ -101,11 +101,17 @@ EffectProcessFactory_T<Jit::BytebeatModel>::descriptor(QString d) const;
 class QPlainTextEdit;
 namespace Jit
 {
+
+struct BytebeatLanguageSpec
+{
+  static constexpr const char* language = "C++";
+};
+
 using BytebeatEffectFactory = Process::EffectProcessFactory_T<BytebeatModel>;
 using BytebeatLayerFactory = Process::EffectLayerFactory_T<
     BytebeatModel,
     Process::DefaultEffectItem,
-    Process::ProcessScriptEditDialog<BytebeatModel, BytebeatModel::p_script>
+    Process::ProcessScriptEditDialog<BytebeatModel, BytebeatModel::p_script, BytebeatLanguageSpec>
 >;
 
 class BytebeatExecutor final

@@ -102,11 +102,17 @@ EffectProcessFactory_T<Jit::TexgenModel>::descriptor(QString d) const;
 class QPlainTextEdit;
 namespace Jit
 {
+
+struct TexgenLanguageSpec
+{
+  static constexpr const char* language = "C++";
+};
+
 using TexgenEffectFactory = Process::EffectProcessFactory_T<TexgenModel>;
 using TexgenLayerFactory = Process::EffectLayerFactory_T<
     TexgenModel,
     Process::DefaultEffectItem,
-    Process::ProcessScriptEditDialog<TexgenModel, TexgenModel::p_script>
+    Process::ProcessScriptEditDialog<TexgenModel, TexgenModel::p_script, TexgenLanguageSpec>
 >;
 
 class TexgenExecutor final

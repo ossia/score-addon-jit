@@ -86,11 +86,17 @@ public:
   QString m_text;
   std::unique_ptr<NodeCompiler> m_compiler;
 };
+
+struct LanguageSpec
+{
+  static constexpr const char* language = "C++";
+};
+
 using JitEffectFactory = Process::EffectProcessFactory_T<Jit::JitEffectModel>;
 using LayerFactory = Process::EffectLayerFactory_T<
     JitEffectModel,
     Process::DefaultEffectItem,
-    Process::ProcessScriptEditDialog<JitEffectModel, JitEffectModel::p_script>
+    Process::ProcessScriptEditDialog<JitEffectModel, JitEffectModel::p_script, LanguageSpec>
 >;
 }
 
