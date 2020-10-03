@@ -23,12 +23,6 @@ set(HDRS
 
     Bytebeat/Bytebeat.hpp
 
-    PluginSettings/PluginSettings.hpp
-    PluginSettings/PluginSettingsModel.hpp
-    PluginSettings/PluginSettingsPresenter.hpp
-    PluginSettings/PluginSettingsView.hpp
-    PluginSettings/PluginItemModel.hpp
-    PluginSettings/FileDownloader.hpp
     score_addon_jit.hpp
 )
 
@@ -39,11 +33,6 @@ set(SRCS
 
     Bytebeat/Bytebeat.cpp
 
-    PluginSettings/PluginSettingsModel.cpp
-    PluginSettings/PluginSettingsPresenter.cpp
-    PluginSettings/PluginSettingsView.cpp
-    PluginSettings/PluginItemModel.cpp
-    PluginSettings/FileDownloader.cpp
     score_addon_jit.cpp
 
     # Note: has to be last as it uses some macros that conflicts with Qt's

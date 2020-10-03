@@ -1,6 +1,5 @@
 #include "score_addon_jit.hpp"
 
-#include <PluginSettings/PluginSettings.hpp>
 #include <Process/Execution/ProcessComponent.hpp>
 #include <score_plugin_engine.hpp>
 #include <score_plugin_library.hpp>
@@ -58,9 +57,7 @@ std::vector<std::unique_ptr<score::InterfaceBase>> score_addon_jit::factories(
     #if defined(SCORE_JIT_HAS_TEXGEN)
       , Jit::TexgenExecutorFactory
     #endif
-      >,
-      FW<score::SettingsDelegateFactory
-      , PluginSettings::Factory>
+      >
       >(ctx, key);
 }
 
