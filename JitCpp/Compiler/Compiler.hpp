@@ -24,9 +24,6 @@ public:
 
     auto &JD = JIT.getMainJITDylib();
     {
-      m_overrides.enable(JD, m_mangler);
-    }
-    {
       // auto s = absoluteSymbols({ { Mangle("atexit"), JITEvaluatedSymbol(pointerToJITTargetAddress(&atexit), JITSymbolFlags::Exported)}});
       // JD.define(std::move(s));
     }
@@ -102,7 +99,5 @@ private:
 
   const llvm::DataLayout &m_dl{m_jit->getDataLayout()};
   llvm::orc::MangleAndInterner m_mangler{m_jit->getExecutionSession(), m_dl};
-
-  llvm::orc::LocalCXXRuntimeOverrides m_overrides;
 };
 }
