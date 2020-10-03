@@ -19,7 +19,7 @@ rsync -ar "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xc
 if [[ -d "$SCORE/3rdparty/libossia/3rdparty/boost_1_73_0" ]]; then
   rsync -ar "$SCORE/3rdparty/libossia/3rdparty/boost_1_73_0/boost" "include/"
 else 
-  rsync -ar "/usr/local/include/boost" "include/"
+  cp -rf "/usr/local/Cellar/boost/1.73.0/include/boost" "include/"
 fi
 
 export CLANG_VER=$(ls /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/)

@@ -31,8 +31,6 @@
 namespace Jit
 {
 
-
-#define SCORE_DEPLOYMENT_BUILD 1
 static inline std::string locateSDK()
 {
   auto& ctx = score::AppContext().settings<Library::Settings::Model>();
@@ -64,9 +62,11 @@ static inline std::string locateSDK()
   {
     QDir d{appFolder};
     d.cdUp();
-    d.cd("Frameworks");
-    d.cd("Score.Framework");
-    return d.absolutePath().toStdString();
+    if(d.cd("Frameworks"))
+     if(d.cd("Score.Framework"))
+       return d.absolutePath().toStdString();
+    else
+       return QString(appFolder + "/Score.Framework").toStdString();
   }
 #endif
 
@@ -347,9 +347,15 @@ static inline void populateIncludeDirs(std::vector<std::string>& args)
   }
 
   qDebug() << "SDK located: " << QString::fromStdString(sdk);
+  std::string llvm_lib_version = SCORE_LLVM_VERSION;
+
+  QDir resDir = QString(QString::fromStdString(sdk) + "/lib/clang");
+  auto entries = resDir.entryList(QDir::Dirs | QDir::NoDotAndDotDot);
+  if(!entries.empty())
+    llvm_lib_version = entries.front().toStdString();
 
   args.push_back("-resource-dir");
-  args.push_back(sdk + "/lib/clang/" SCORE_LLVM_VERSION);
+  args.push_back(sdk + "/lib/clang/" + llvm_lib_version);
 
 #if defined(_LIBCPP_VERSION)
   args.push_back("-internal-isystem");
@@ -357,7 +363,7 @@ static inline void populateIncludeDirs(std::vector<std::string>& args)
 #endif
 
   args.push_back("-internal-isystem");
-  args.push_back(sdk + "/lib/clang/" SCORE_LLVM_VERSION "/include");
+  args.push_back(sdk + "/lib/clang/" + llvm_lib_version + "/include");
 
   args.push_back("-internal-externc-isystem");
   args.push_back(sdk + "/include");
@@ -444,6 +450,7 @@ static inline void populateIncludeDirs(std::vector<std::string>& args)
   else
   {
     auto src_include_dirs = {"/3rdparty/libossia/src",
+                             "/3rdparty/libossia/3rdparty/boost_1_73_0",
                              "/3rdparty/libossia/3rdparty/variant/include",
                              "/3rdparty/libossia/3rdparty/nano-signal-slot/include",
                              "/3rdparty/libossia/3rdparty/spdlog/include",

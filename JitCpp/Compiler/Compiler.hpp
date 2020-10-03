@@ -50,7 +50,7 @@ public:
   ~JitCompiler()
   {
 #if LLVM_VERSION_MAJOR >= 11
-    m_jit->deinitialize(JIT.getMainJITDylib());
+    m_jit->deinitialize(m_jit->getMainJITDylib());
 #else
     m_jit->runDestructors();
 #endif
@@ -72,7 +72,7 @@ public:
       throw Err;
 
 #if LLVM_VERSION_MAJOR >= 11
-    m_jit->initialize(JIT.getMainJITDylib());
+    m_jit->initialize(m_jit->getMainJITDylib());
 #else
     m_jit->runConstructors();
 #endif
