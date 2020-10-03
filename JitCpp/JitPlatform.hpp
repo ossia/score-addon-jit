@@ -123,19 +123,27 @@ static inline void populateCompileOptions(std::vector<std::string>& args, Compil
 
   args.push_back("-fno-use-cxa-atexit");
 
-  args.push_back("-Ofast");
   // -Ofast stuff:
-
-  args.push_back("-menable-no-infs");
-  args.push_back("-menable-no-nans");
   args.push_back("-menable-unsafe-fp-math");
   args.push_back("-fno-signed-zeros");
   args.push_back("-mreassociate");
   args.push_back("-freciprocal-math");
+  args.push_back("-fno-rounding-math");
   args.push_back("-fno-trapping-math");
   args.push_back("-ffp-contract=fast");
-  args.push_back("-ffast-math");
+
+#if !defined(__linux__) || (defined(__linux__) && __GLIBC_MINOR__ >= 31)
+  // isn't that great
+  // https://reviews.llvm.org/D74712
+  args.push_back("-Ofast");
+  args.push_back("-menable-no-infs");
+  args.push_back("-menable-no-nans");
   args.push_back("-ffinite-math-only");
+  args.push_back("-ffast-math");
+#else
+  args.push_back("-O3");
+  args.push_back("-fno-builtin");
+#endif
 
   args.push_back("-fgnuc-version=10.0.1");
 
@@ -196,7 +204,6 @@ static inline void populateCompileOptions(std::vector<std::string>& args, Compil
   // args.push_back("-momit-leaf-frame-pointer");
   args.push_back("-vectorize-loops");
   args.push_back("-vectorize-slp");
-
 }
 
 static inline void populateDefinitions(std::vector<std::string>& args)
