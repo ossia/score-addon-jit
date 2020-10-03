@@ -2,6 +2,9 @@
 #include <JitCpp/ClangDriver.hpp>
 #include <llvm/ExecutionEngine/Orc/ThreadSafeModule.h>
 #include <llvm/ExecutionEngine/Orc/LLJIT.h>
+
+#include <llvm/ExecutionEngine/Orc/ExecutionUtils.h>
+
 #include <QDebug>
 namespace Jit
 {
@@ -13,7 +16,6 @@ public:
   {
     using namespace llvm;
     using namespace llvm::orc;
-
     // Load own executable as dynamic library.
     // Required for RTDyldMemoryManager::getSymbolAddressInProcess().
     sys::DynamicLibrary::LoadLibraryPermanently(nullptr);
@@ -21,6 +23,9 @@ public:
     LLJIT& JIT = *m_jit;
 
     auto &JD = JIT.getMainJITDylib();
+    {
+      m_overrides.enable(JD, m_mangler);
+    }
     {
       // auto s = absoluteSymbols({ { Mangle("atexit"), JITEvaluatedSymbol(pointerToJITTargetAddress(&atexit), JITSymbolFlags::Exported)}});
       // JD.define(std::move(s));
@@ -47,7 +52,11 @@ public:
 
   ~JitCompiler()
   {
+#if LLVM_VERSION_MAJOR >= 11
+    m_jit->deinitialize(JIT.getMainJITDylib());
+#else
     m_jit->runDestructors();
+#endif
   }
 
   auto compile(
@@ -65,7 +74,11 @@ public:
     if (auto Err = m_jit->addIRModule(ThreadSafeModule(std::move(*module), context)); bool(Err))
       throw Err;
 
+#if LLVM_VERSION_MAJOR >= 11
+    m_jit->initialize(JIT.getMainJITDylib());
+#else
     m_jit->runConstructors();
+#endif
     return std::move(*module);
   }
 
@@ -89,5 +102,7 @@ private:
 
   const llvm::DataLayout &m_dl{m_jit->getDataLayout()};
   llvm::orc::MangleAndInterner m_mangler{m_jit->getExecutionSession(), m_dl};
+
+  llvm::orc::LocalCXXRuntimeOverrides m_overrides;
 };
 }
