@@ -2,6 +2,7 @@
 #undef READ
 #undef WRITE
 #undef RESET
+#undef OPTIONAL
 
 #if __has_include(<../tools/driver/cc1_main.cpp>)
 #include <../tools/driver/cc1_main.cpp>
