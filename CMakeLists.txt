@@ -19,7 +19,6 @@ set(HDRS
     JitCpp/ApplicationPlugin.hpp
     JitCpp/MetadataGenerator.hpp
     JitCpp/Compiler/Compiler.hpp
-    JitCpp/Compiler/Linker.hpp
     JitCpp/Compiler/Driver.hpp
 
     Bytebeat/Bytebeat.hpp
@@ -181,15 +180,7 @@ setup_score_plugin(${PROJECT_NAME})
 # - libc++
 # - Qt headers
 # - MinGW headers
-install(DIRECTORY "${_srcDir}/"
-        DESTINATION include/score
-        COMPONENT Devel
-        FILES_MATCHING
-        PATTERN "*.hpp"
-        PATTERN ".git" EXCLUDE
-        PATTERN "tests" EXCLUDE
-        PATTERN "Tests" EXCLUDE
-)
+
 #
 # add_library(Benchmarker SHARED Benchmarks/Benchmarker.cpp)
 # target_link_libraries(Benchmarker PUBLIC ${SCORE_PLUGINS_LIST} -Wl,--stack,16777216)

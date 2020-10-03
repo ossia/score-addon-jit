@@ -2,6 +2,13 @@
 #include <JitCpp/Compiler/Driver.hpp>
 #include <wobjectimpl.h>
 
+#if defined(__linux__)
+#include <score_addon_jit_export.h>
+SCORE_ADDON_JIT_EXPORT int atexit (void (*__func) (void)) __THROW __nonnull ((1)) {
+  return 0;
+}
+#endif
+
 W_OBJECT_IMPL(Jit::AddonCompiler)
 #if defined(WIN32)
 namespace llvm::orc

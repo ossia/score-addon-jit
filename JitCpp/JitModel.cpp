@@ -34,7 +34,10 @@ JitEffectModel::JitEffectModel(
     : Process::ProcessModel{t, id, "Jit", parent}
 {
   init();
-  setScript(jitProgram);
+  if(jitProgram.isEmpty())
+    setScript(Process::EffectProcessFactory_T<Jit::JitEffectModel>{}.customConstructionData());
+  else
+    setScript(jitProgram);
 }
 
 JitEffectModel::~JitEffectModel() {}
@@ -157,21 +160,26 @@ void JitEffectModel::reload()
       old_compilers.pop_back();
   }
 
+  qDebug( "== reload() == ");
   m_compiler = std::make_unique<NodeCompiler>("score_graph_node_factory");
+
+  qDebug( "     std::make_unique<NodeCompiler> == ");
   auto fx_text = m_text.toLocal8Bit();
-  NodeFactory jit_factory;
   if (fx_text.isEmpty())
     return;
 
+  NodeFactory jit_factory;
   try
   {
     jit_factory = (*m_compiler)(fx_text.toStdString(), {}, CompilerOptions{false});
 
+    qDebug( "     jit_factory == ");
     if (!jit_factory)
       return;
   }
   catch (const std::exception& e)
   {
+    qDebug() << e.what();
     errorMessage(0, e.what());
     return;
   }
@@ -182,6 +190,7 @@ void JitEffectModel::reload()
   }
 
   std::unique_ptr<ossia::graph_node> jit_object{jit_factory()};
+  qDebug( "     jit_object == ");
   if (!jit_object)
   {
     jit_factory = {};
@@ -195,17 +204,23 @@ void JitEffectModel::reload()
   m_inlets.clear();
   m_outlets.clear();
 
+  qDebug( "     about to call jit_object->root_inputs... == ");
   for (ossia::inlet* port : jit_object->root_inputs())
   {
+    qDebug( "      inputs ok ");
     if (auto inl = port->visit(inlet_vis{*this}))
     {
+      qDebug( "      inputs added ");
       m_inlets.push_back(inl);
     }
   }
+  qDebug( "     about to call jit_object->root_outputs... == ");
   for (ossia::outlet* port : jit_object->root_outputs())
   {
+    qDebug( "      outputs ok ");
     if (auto inl = port->visit(outlet_vis{*this}))
     {
+      qDebug( "      outputs added ");
       m_outlets.push_back(inl);
     }
   }
@@ -214,6 +229,7 @@ void JitEffectModel::reload()
       && m_outlets.front()->type() == Process::PortType::Audio)
     safe_cast<Process::AudioOutlet*>(m_outlets.front())->setPropagate(true);
 
+  qDebug( "     all done... == ");
   inletsChanged();
   outletsChanged();
   changed();
@@ -279,28 +295,30 @@ EffectProcessFactory_T<Jit::JitEffectModel>::customConstructionData() const
 #include <iostream>
 #include <vector>
 
-struct foo : ossia::graph_node {
- foo()
- {
-   using namespace ossia;
-   m_inlets.push_back(make_inlet<value_port>());
-   m_outlets.push_back(make_outlet<value_port>());
- }
+struct example : ossia::nonowning_graph_node {
+  ossia::value_inlet in;
+  ossia::value_outlet out;
+  example()
+  {
+    m_inlets.push_back(&in);
+    m_outlets.push_back(&out);
+  }
 
- void run(const ossia::token_request& t, ossia::exec_state_facade) noexcept override
- {
-   auto& in  = *m_inlets[0]->target<ossia::value_port>();
-   auto& out = *m_outlets[0]->target<ossia::value_port>();
-
-   for(auto& val : in.get_data())
-   {
-     out.write_value(ossia::convert<float>(val.value) * 2, t.offset);
-   }
- }
+  void run(
+      const ossia::token_request& t,
+      ossia::exec_state_facade st) noexcept override
+  {
+    for(auto& val : in.data.get_data())
+    {
+      float new_value = ossia::convert<float>(val.value) * 2.;
+      int64_t time = val.timestamp;
+      out.data.write_value(new_value, time);
+    }
+  }
 };
 
 extern "C" ossia::graph_node* score_graph_node_factory() {
-  return new foo;
+  return new example;
 }
 )_";
 }

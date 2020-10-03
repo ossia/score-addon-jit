@@ -137,6 +137,8 @@ static inline void populateCompileOptions(std::vector<std::string>& args, Compil
   args.push_back("-ffast-math");
   args.push_back("-ffinite-math-only");
 
+  args.push_back("-fgnuc-version=10.0.1");
+
   args.push_back("-mrelocation-model");
   args.push_back("pic");
   args.push_back("-pic-level");
@@ -219,15 +221,22 @@ static inline void populateDefinitions(std::vector<std::string>& args)
   args.push_back("-DSCORE_LIB_BASE");
   args.push_back("-DSCORE_LIB_DEVICE");
   args.push_back("-DSCORE_LIB_INSPECTOR");
+  args.push_back("-DSCORE_LIB_LOCALTREE");
   args.push_back("-DSCORE_LIB_PROCESS");
   args.push_back("-DSCORE_LIB_STATE");
+  args.push_back("-DSCORE_ADDON_GFX");
+  args.push_back("-DSCORE_ADDON_REMOTECONTROL");
+  args.push_back("-DSCORE_ADDON_NODAL");
+  args.push_back("-DSCORE_PLUGIN_AUDIO");
   args.push_back("-DSCORE_PLUGIN_AUTOMATION");
   args.push_back("-DSCORE_PLUGIN_CURVE");
+  args.push_back("-DSCORE_PLUGIN_DATAFLOW");
   args.push_back("-DSCORE_PLUGIN_DEVICEEXPLORER");
   args.push_back("-DSCORE_PLUGIN_ENGINE");
   args.push_back("-DSCORE_PLUGIN_LIBRARY");
   args.push_back("-DSCORE_PLUGIN_MAPPING");
   args.push_back("-DSCORE_PLUGIN_MEDIA");
+  args.push_back("-DSCORE_PLUGIN_PROTOCOLS");
   args.push_back("-DSCORE_PLUGIN_SCENARIO");
   args.push_back("-DSCORE_PLUGIN_MIDI");
   args.push_back("-DSCORE_PLUGIN_RECORDING");
@@ -342,8 +351,27 @@ static inline void populateIncludeDirs(std::vector<std::string>& args)
   args.push_back("-resource-dir");
   args.push_back(sdk + "/lib/clang/" SCORE_LLVM_VERSION);
 
+#if defined(_LIBCPP_VERSION)
+  args.push_back("-internal-isystem");
+  args.push_back(sdk + "/include/c++/v1");
+#endif
+
   args.push_back("-internal-isystem");
   args.push_back(sdk + "/lib/clang/" SCORE_LLVM_VERSION "/include");
+
+  args.push_back("-internal-externc-isystem");
+  args.push_back(sdk + "/include");
+
+
+  // -resource-dir
+  // /opt/score-sdk/llvm/lib/clang/11.0.0
+  // -internal-isystem
+  // /opt/score-sdk/llvm/bin/../include/c++/v1
+  // -internal-isystem
+  // /opt/score-sdk/llvm/lib/clang/11.0.0/include
+  //-internal-externc-isystem
+  ///build/score.AppDir/usr/include/
+
 
   auto include = [&](const auto& path) {
     args.push_back("-I" + sdk + "/include/" + path);
@@ -389,7 +417,7 @@ static inline void populateIncludeDirs(std::vector<std::string>& args)
 #if defined(__linux__)
   include("x86_64-linux-gnu"); // #debian
 #endif
-  include(""); // /usr/include
+  // include(""); // /usr/include
   include("qt");
   include("qt/QtCore");
   include("qt/QtGui");
@@ -415,7 +443,7 @@ static inline void populateIncludeDirs(std::vector<std::string>& args)
   }
   else
   {
-    auto src_include_dirs = {"/3rdparty/libossia/OSSIA",
+    auto src_include_dirs = {"/3rdparty/libossia/src",
                              "/3rdparty/libossia/3rdparty/variant/include",
                              "/3rdparty/libossia/3rdparty/nano-signal-slot/include",
                              "/3rdparty/libossia/3rdparty/spdlog/include",
@@ -444,7 +472,13 @@ static inline void populateIncludeDirs(std::vector<std::string>& args)
                              "/src/plugins/score-lib-device",
                              "/src/plugins/score-lib-process",
                              "/src/plugins/score-lib-inspector",
+                             "/src/plugins/score-addon-gfx",
+                             "/src/plugins/score-addon-jit",
+                             "/src/plugins/score-addon-nodal",
+                             "/src/plugins/score-addon-remotecontrol",
+                             "/src/plugins/score-plugin-audio",
                              "/src/plugins/score-plugin-curve",
+                             "/src/plugins/score-plugin-dataflow",
                              "/src/plugins/score-plugin-engine",
                              "/src/plugins/score-plugin-scenario",
                              "/src/plugins/score-plugin-library",
@@ -452,6 +486,7 @@ static inline void populateIncludeDirs(std::vector<std::string>& args)
                              "/src/plugins/score-plugin-media",
                              "/src/plugins/score-plugin-loop",
                              "/src/plugins/score-plugin-midi",
+                             "/src/plugins/score-plugin-protocols",
                              "/src/plugins/score-plugin-recording",
                              "/src/plugins/score-plugin-automation",
                              "/src/plugins/score-plugin-js",
@@ -468,7 +503,13 @@ static inline void populateIncludeDirs(std::vector<std::string>& args)
                            "/src/plugins/score-lib-device",
                            "/src/plugins/score-lib-process",
                            "/src/plugins/score-lib-inspector",
+                           "/src/plugins/score-addon-gfx",
+                           "/src/plugins/score-addon-jit",
+                           "/src/plugins/score-addon-nodal",
+                           "/src/plugins/score-addon-remotecontrol",
+                           "/src/plugins/score-plugin-audio",
                            "/src/plugins/score-plugin-curve",
+                           "/src/plugins/score-plugin-dataflow",
                            "/src/plugins/score-plugin-engine",
                            "/src/plugins/score-plugin-scenario",
                            "/src/plugins/score-plugin-library",
@@ -476,11 +517,12 @@ static inline void populateIncludeDirs(std::vector<std::string>& args)
                            "/src/plugins/score-plugin-media",
                            "/src/plugins/score-plugin-loop",
                            "/src/plugins/score-plugin-midi",
+                           "/src/plugins/score-plugin-protocols",
                            "/src/plugins/score-plugin-recording",
                            "/src/plugins/score-plugin-automation",
                            "/src/plugins/score-plugin-js",
                            "/src/plugins/score-plugin-mapping",
-                           "/3rdparty/libossia/OSSIA"};
+                           "/3rdparty/libossia/src"};
 
     for (auto path : src_build_dirs)
     {

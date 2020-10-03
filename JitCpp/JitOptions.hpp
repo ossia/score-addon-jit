@@ -5,7 +5,7 @@ namespace Jit
 
 struct CompilerOptions
 {
-  bool NoExceptions{};
+  bool NoExceptions{true};
 };
 
 }

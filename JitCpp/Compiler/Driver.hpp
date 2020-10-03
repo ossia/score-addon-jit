@@ -11,6 +11,7 @@ struct Driver
 {
   Driver(const std::string& fname)
       : X{0, nullptr}
+      , ts_ctx{std::make_unique<llvm::LLVMContext>()}
       , jit{*llvm::EngineBuilder().selectTarget()}
       , factory_name{fname}
   {
@@ -29,15 +30,8 @@ struct Driver
 
     std::string cpp = *sourceFileName;
     auto filename = QFileInfo(QString::fromStdString(cpp)).fileName();
-    const QString global_init = "_GLOBAL__sub_I_" + filename.replace('-', '_');
 
-    qDebug() << "Looking for: " << global_init;
-    auto module = jit.compile(cpp, flags, opts, context);
-    {
-      auto globals_init = jit.getFunction<void()>(global_init.toStdString());
-      if (globals_init)
-        (*globals_init)();
-    }
+    auto module = jit.compile(cpp, flags, opts, ts_ctx);
     auto t1 = std::chrono::high_resolution_clock::now();
 
     auto jitedFn = jit.getFunction<Fun_T>(factory_name);
@@ -55,6 +49,7 @@ struct Driver
 
   llvm::PrettyStackTraceProgram X;
   llvm::LLVMContext context;
+  llvm::orc::ThreadSafeContext ts_ctx;
   JitCompiler jit;
   std::string factory_name;
 };

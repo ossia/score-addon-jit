@@ -167,16 +167,33 @@ std::vector<std::string> ClangCC1Driver::getClangCC1Args(CompilerOptions opts)
   args.push_back("-emit-llvm-bc");
   args.push_back("-emit-llvm-uselists");
 
-  populateIncludeDirs(args);
   populateCompileOptions(args, opts);
   populateDefinitions(args);
+  populateIncludeDirs(args);
 
-  /*
+  std::cerr << "Original option dump ! \n";
+  for(const auto& arg : args)
+  {
+    std::cerr << " -- " << arg << std::endl;
+  }
+
+  QFile f("/tmp/args.txt");
+  if(f.exists())
+  {
+    QString r = f.readAll();
+    auto splitted = r.split(QRegularExpression("[:space:]"));
+    args.clear();
+    for(auto splt: splitted)
+    {
+      args.push_back(r.toStdString());
+    }
+
+    std::cerr << "Actual option dump ! \n";
     for(const auto& arg : args)
     {
       std::cerr << " -- " << arg << std::endl;
     }
-    */
+  }
 
   return args;
 }
